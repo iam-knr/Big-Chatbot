@@ -1,6 +1,11 @@
-<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
+<?php
+if ( ! defined( 'ABSPATH' ) ) exit;
 
-<div id="bigchat-wrapper" class="bigchat-pos-<?php echo esc_attr( BigChatConfig['position'] ?? 'right' ); ?>">
+$bigchat_opts     = get_option( 'bigchat_settings', array() );
+$bigchat_position = isset( $bigchat_opts['position'] ) ? $bigchat_opts['position'] : 'right';
+?>
+
+<div id="bigchat-wrapper" class="bigchat-pos-<?php echo esc_attr( $bigchat_position ); ?>">
 
     <!-- Bubble Button -->
     <button id="bigchat-bubble" aria-label="Open Chat" aria-expanded="false">
@@ -18,7 +23,7 @@
                 <span id="bigchat-bot-name"></span>
                 <span id="bigchat-status">Online</span>
             </div>
-            <button id="bigchat-close-btn" aria-label="Close Chat">✕</button>
+            <button id="bigchat-close-btn" aria-label="Close Chat">&times;</button>
         </div>
 
         <!-- Messages -->
@@ -26,21 +31,22 @@
 
         <!-- Lead Form (hidden by default) -->
         <form id="bigchat-lead-form" hidden>
-            <input type="text"   name="bigchat_name"  placeholder="Your Name *"  required />
-            <input type="email"  name="bigchat_email" placeholder="Email Address *" required />
-            <input type="tel"    name="bigchat_phone" placeholder="Phone Number" />
-            <textarea            name="bigchat_query" placeholder="Your message..." rows="3"></textarea>
+            <input type="text"  name="bigchat_name"  placeholder="Your Name *" required />
+            <input type="email" name="bigchat_email" placeholder="Email Address *" required />
+            <input type="tel"   name="bigchat_phone" placeholder="Phone Number" />
+            <textarea           name="bigchat_query" placeholder="Your message..." rows="3"></textarea>
             <label class="bigchat-consent">
                 <input type="checkbox" name="bigchat_consent" required />
                 I agree to be contacted regarding my enquiry.
             </label>
-            <button type="submit" id="bigchat-lead-submit">Send Message ✉️</button>
+            <button type="submit" id="bigchat-lead-submit">Send Message &#x2709;</button>
         </form>
 
         <!-- Input Row -->
         <div id="bigchat-input-row">
             <input type="text" id="bigchat-input" placeholder="Type a message..." autocomplete="off" />
-            <button id="bigchat-send-btn" aria-label="Send">➤</button>
+            <button id="bigchat-send-btn" aria-label="Send">&#x27A4;</button>
         </div>
+
     </div>
 </div>
