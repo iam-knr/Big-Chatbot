@@ -2,53 +2,22 @@
 defined( 'ABSPATH' ) || exit;
 
 /* =========================================================
-   ADMIN MENU — single hook registers ALL submenus
+   ADMIN MENU
    ========================================================= */
 add_action( 'admin_menu', 'bigchat_admin_menu' );
 function bigchat_admin_menu() {
-    // Main menu + Settings page
-    add_menu_page(
-        'Big Chatbot',
-        'Big Chatbot',
-        'manage_options',
-        'big-chatbot',
-        'bigchat_settings_page',
-        'dashicons-format-chat',
-        58
-    );
-    add_submenu_page(
-        'big-chatbot',
-        'Settings',
-        'Settings',
-        'manage_options',
-        'big-chatbot',
-        'bigchat_settings_page'
-    );
-    add_submenu_page(
-        'big-chatbot',
-        'Flow Builder',
-        'Flow Builder',
-        'manage_options',
-        'big-chatbot-builder',
-        'bigchat_builder_page'
-    );
-    add_submenu_page(
-        'big-chatbot',
-        'Leads',
-        'Leads',
-        'manage_options',
-        'big-chatbot-leads',
-        'bigchat_leads_page'
-    );
+    add_menu_page( 'Big Chatbot', 'Big Chatbot', 'manage_options', 'big-chatbot', 'bigchat_settings_page', 'dashicons-format-chat', 58 );
+    add_submenu_page( 'big-chatbot', 'Settings',     'Settings',     'manage_options', 'big-chatbot',         'bigchat_settings_page' );
+    add_submenu_page( 'big-chatbot', 'Flow Builder', 'Flow Builder', 'manage_options', 'big-chatbot-builder', 'bigchat_builder_page' );
+    add_submenu_page( 'big-chatbot', 'Leads',        'Leads',        'manage_options', 'big-chatbot-leads',   'bigchat_leads_page' );
 }
 
 /* =========================================================
    SETTINGS PAGE
    ========================================================= */
 function bigchat_settings_page() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_die( 'Unauthorised' );
-    }
+    if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorised' );
+
     if (
         isset( $_POST['_bigchat_nonce'] ) &&
         wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_bigchat_nonce'] ) ), 'bigchat_save' )
@@ -56,7 +25,7 @@ function bigchat_settings_page() {
         $pos = isset( $_POST['position'] ) ? sanitize_text_field( wp_unslash( $_POST['position'] ) ) : 'right';
         $opt = array(
             'bot_name'           => sanitize_text_field( wp_unslash( $_POST['bot_name']           ?? 'Support' ) ),
-            'bot_color'          => sanitize_hex_color(  wp_unslash( $_POST['bot_color']           ?? '#4F46E5' ) ),
+            'bot_color'          => sanitize_hex_color(  wp_unslash( $_POST['bot_color']           ?? '#16a34a' ) ),
             'greeting'           => sanitize_text_field( wp_unslash( $_POST['greeting']            ?? '' ) ),
             'position'           => in_array( $pos, array( 'right', 'left' ), true ) ? $pos : 'right',
             'agent_email'        => sanitize_email(      wp_unslash( $_POST['agent_email']         ?? '' ) ),
@@ -66,6 +35,7 @@ function bigchat_settings_page() {
             'whatsapp_no'        => preg_replace( '/[^0-9]/', '', wp_unslash( $_POST['whatsapp_no'] ?? '' ) ),
         );
         update_option( 'bigchat_settings', $opt );
+
         $tpl = isset( $_POST['active_template'] ) ? sanitize_key( wp_unslash( $_POST['active_template'] ) ) : 'generic';
         update_option( 'bigchat_active_template', $tpl );
         echo '<div class="notice notice-success is-dismissible"><p>Settings saved.</p></div>';
@@ -73,6 +43,10 @@ function bigchat_settings_page() {
 
     $opt = get_option( 'bigchat_settings', array() );
     $tpl = get_option( 'bigchat_active_template', 'generic' );
+
+    // Check if a custom builder flow exists
+    $has_custom = ! empty( get_option( 'bigchat_custom_flow', array() ) );
+
     $templates = array(
         'generic'    => 'Generic / Any Business',
         'agency'     => 'Agency / Freelancer',
@@ -80,10 +54,41 @@ function bigchat_settings_page() {
         'restaurant' => 'Restaurant / Cafe',
         'realestate' => 'Real Estate',
     );
+    if ( $has_custom ) {
+        $templates = array( 'custom' => '✅ Custom Builder Flow (Active)' ) + $templates;
+    }
     ?>
-    <div class="wrap">
+    <style>
+    .bigchat-admin-wrap{max-width:720px;}
+    .bigchat-admin-wrap h1{font-size:20px;margin-bottom:6px;}
+    .bigchat-hero-bar{
+        display:flex;align-items:center;gap:10px;
+        background:#f0fdf4;border:1px solid #bbf7d0;
+        border-radius:8px;padding:12px 16px;
+        margin:14px 0 22px;
+    }
+    .bigchat-hero-bar span{font-size:13px;color:#15803d;font-weight:600;}
+    .bigchat-hero-bar a.button{background:#16a34a;border-color:#15803d;color:#fff;}
+    .bigchat-hero-bar a.button:hover{background:#15803d;}
+    .bigchat-active-badge{
+        display:inline-flex;align-items:center;gap:5px;
+        background:#dcfce7;color:#16a34a;
+        border:1px solid #bbf7d0;border-radius:999px;
+        padding:3px 10px;font-size:11px;font-weight:700;
+        margin-left:8px;
+    }
+    </style>
+    <div class="wrap bigchat-admin-wrap">
     <h1>Big Chatbot &mdash; Settings</h1>
-    <p><a href="<?php echo esc_url( admin_url( 'admin.php?page=big-chatbot-builder' ) ); ?>" class="button">&#9654; Open Flow Builder</a></p>
+
+    <div class="bigchat-hero-bar">
+        <span>&#9672; Flow Builder</span>
+        <a href="<?php echo esc_url( admin_url( 'admin.php?page=big-chatbot-builder' ) ); ?>" class="button">&#9654; Open Flow Builder</a>
+        <?php if ( $tpl === 'custom' && $has_custom ) : ?>
+        <span class="bigchat-active-badge">&#10003; Builder Flow is Live</span>
+        <?php endif; ?>
+    </div>
+
     <form method="post">
     <?php wp_nonce_field( 'bigchat_save', '_bigchat_nonce' ); ?>
     <table class="form-table">
@@ -93,7 +98,7 @@ function bigchat_settings_page() {
         </tr>
         <tr>
             <th><label for="bc_color">Brand Color</label></th>
-            <td><input id="bc_color" type="color" name="bot_color" value="<?php echo esc_attr( $opt['bot_color'] ?? '#4F46E5' ); ?>"></td>
+            <td><input id="bc_color" type="color" name="bot_color" value="<?php echo esc_attr( $opt['bot_color'] ?? '#16a34a' ); ?>"></td>
         </tr>
         <tr>
             <th><label for="bc_greet">Greeting</label></th>
@@ -109,14 +114,18 @@ function bigchat_settings_page() {
             </td>
         </tr>
         <tr>
-            <th><label for="bc_tpl">Business Template</label></th>
+            <th><label for="bc_tpl">Active Flow</label></th>
             <td>
                 <select id="bc_tpl" name="active_template">
                     <?php foreach ( $templates as $k => $v ) : ?>
                     <option value="<?php echo esc_attr( $k ); ?>" <?php selected( $tpl, $k ); ?>><?php echo esc_html( $v ); ?></option>
                     <?php endforeach; ?>
                 </select>
-                <p class="description">Or build your own flow in <a href="<?php echo esc_url( admin_url( 'admin.php?page=big-chatbot-builder' ) ); ?>">Flow Builder</a>.</p>
+                <?php if ( ! $has_custom ) : ?>
+                <p class="description">Build and activate your own flow in <a href="<?php echo esc_url( admin_url( 'admin.php?page=big-chatbot-builder' ) ); ?>">Flow Builder</a>. Once saved there it will appear here as <strong>Custom Builder Flow</strong>.</p>
+                <?php else : ?>
+                <p class="description">Your custom builder flow is ready. Select it above and save to make it live, or click <a href="<?php echo esc_url( admin_url( 'admin.php?page=big-chatbot-builder' ) ); ?>">Flow Builder</a> to edit it.</p>
+                <?php endif; ?>
             </td>
         </tr>
         <tr>
