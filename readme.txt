@@ -1,36 +1,36 @@
 === Big Chatbot ===
 Contributors: kailasnathr
-Tags: chatbot, live chat, lead generation, whatsapp, contact form
+Tags: chatbot, lead generation, whatsapp, contact form, small business
 Requires at least: 5.8
 Tested up to: 6.5
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 2.0.0
 License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A plug-and-play chatbot for small businesses. Capture leads, answer queries, notify agents, and connect via WhatsApp — no coding needed.
+Plug-and-play chatbot for small businesses. Lead capture, agent email notifications, WhatsApp button, 5 business templates.
 
 == Description ==
-Big Chatbot adds a smart floating chatbot widget to your WordPress site.
-Pick a pre-built conversation template for your business type, customise the flow, capture leads, send notifications to your team, and let visitors connect via WhatsApp — all from the WordPress admin.
+Big Chatbot adds a floating chatbot widget to your WordPress site with zero configuration needed.
 
-**Features:**
-* Rule-based conversation flow — no AI/API dependency
-* 5+ pre-built templates (Agency, Clinic, Restaurant, Real Estate, Generic)
-* Lead capture form with DB storage
-* Email notification to agent + optional auto-reply to lead
+* Rule-based flows - no AI or API dependency
+* 5 business templates: Generic, Agency, Clinic, Restaurant, Real Estate
+* Lead capture with DB storage
+* Email notification to agent + optional auto-reply
 * WhatsApp deeplink button
 * Leads dashboard with CSV export
-* Fully customisable: brand color, bot name, greeting, position
+* Brand color, bot name, greeting all configurable
 * Mobile responsive
-* GDPR consent checkbox
 
 == Installation ==
-1. Upload the plugin folder to `/wp-content/plugins/`
-2. Activate via **Plugins** in WordPress admin
-3. Go to **Big Chatbot → Settings** to configure
-4. Select your business template and save
+1. Upload plugin folder to /wp-content/plugins/
+2. Activate via Plugins menu
+3. Go to Big Chatbot > Settings
+4. Select your business template, configure email and WhatsApp number
+5. Save - widget appears on all pages
 
 == Changelog ==
-= 1.0.0 =
-* Initial release — Phase 1: widget, templates, lead capture, email, WhatsApp
+= 2.0.0 =
+* Full rewrite - clean architecture, zero fatal errors
+* Renamed classes with BigChat_ prefix
+* Removed all JS syntax from PHP templates
+* Streamlined AJAX action names

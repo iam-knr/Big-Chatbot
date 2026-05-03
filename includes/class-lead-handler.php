@@ -1,47 +1,60 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
-class Big_Lead_Handler {
+class BigChat_Lead_Handler {
+
+    private static function table() {
+        global $wpdb;
+        return $wpdb->prefix . 'bigchat_leads';
+    }
 
     public static function create_table() {
         global $wpdb;
-        $table   = $wpdb->prefix . 'bigchat_leads';
         $charset = $wpdb->get_charset_collate();
-        $sql = "CREATE TABLE IF NOT EXISTS $table (
-            id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            name VARCHAR(100) DEFAULT '',
-            email VARCHAR(150) DEFAULT '',
-            phone VARCHAR(30) DEFAULT '',
-            query TEXT DEFAULT '',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        $table   = self::table();
+        $sql = "CREATE TABLE IF NOT EXISTS {$table} (
+            id         BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            name       VARCHAR(100) NOT NULL DEFAULT '',
+            email      VARCHAR(150) NOT NULL DEFAULT '',
+            phone      VARCHAR(30)  NOT NULL DEFAULT '',
+            query_text TEXT         NOT NULL,
+            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id)
-        ) $charset;";
+        ) {$charset};";
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
     }
 
-    public static function save( $data ) {
+    public static function save( array $data ) {
         global $wpdb;
-        $wpdb->insert(
-            $wpdb->prefix . 'bigchat_leads',
+        $inserted = $wpdb->insert(
+            self::table(),
             array(
-                'name'  => sanitize_text_field( $data['name']  ?? '' ),
-                'email' => sanitize_email( $data['email'] ?? '' ),
-                'phone' => sanitize_text_field( $data['phone'] ?? '' ),
-                'query' => sanitize_textarea_field( $data['query'] ?? '' ),
+                'name'       => sanitize_text_field( $data['name']  ?? '' ),
+                'email'      => sanitize_email( $data['email']      ?? '' ),
+                'phone'      => sanitize_text_field( $data['phone'] ?? '' ),
+                'query_text' => sanitize_textarea_field( $data['query'] ?? '' ),
             ),
             array( '%s', '%s', '%s', '%s' )
         );
-        return $wpdb->insert_id;
+        return $inserted ? (int) $wpdb->insert_id : 0;
     }
 
-    public static function get_all( $limit = 50, $offset = 0 ) {
+    public static function get_all( $limit = 20, $offset = 0 ) {
         global $wpdb;
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         return $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}bigchat_leads ORDER BY created_at DESC LIMIT %d OFFSET %d",
-                $limit, $offset
+                'SELECT * FROM ' . self::table() . ' ORDER BY created_at DESC LIMIT %d OFFSET %d',
+                (int) $limit,
+                (int) $offset
             )
         );
+    }
+
+    public static function count() {
+        global $wpdb;
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::table() );
     }
 }

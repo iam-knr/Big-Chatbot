@@ -1,49 +1,58 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
-class Big_Email_Handler {
+class BigChat_Email_Handler {
 
-    public static function notify_agent( $lead ) {
-        $options  = get_option( 'bigchat_settings', array() );
-        $to       = isset( $options['agent_email'] ) ? $options['agent_email'] : get_option( 'admin_email' );
-        $subject  = isset( $options['email_subject'] ) ? $options['email_subject'] : 'New Lead from Big Chatbot';
-        $headers  = array( 'Content-Type: text/html; charset=UTF-8' );
-        $body     = self::agent_template( $lead );
-        wp_mail( $to, $subject, $body, $headers );
+    private static function settings() {
+        return get_option( 'bigchat_settings', array() );
     }
 
-    public static function notify_lead( $lead ) {
-        $options = get_option( 'bigchat_settings', array() );
-        if ( empty( $options['auto_reply'] ) || empty( $lead['email'] ) ) return;
-        $subject = isset( $options['auto_reply_subject'] ) ? $options['auto_reply_subject'] : 'Thanks for reaching out!';
+    public static function notify_agent( array $lead ) {
+        $s       = self::settings();
+        $to      = ! empty( $s['agent_email'] ) ? $s['agent_email'] : get_option( 'admin_email' );
+        $subject = ! empty( $s['email_subject'] ) ? $s['email_subject'] : 'New Lead from Big Chatbot';
         $headers = array( 'Content-Type: text/html; charset=UTF-8' );
-        $body    = self::lead_template( $lead );
-        wp_mail( $lead['email'], $subject, $body, $headers );
+        wp_mail( $to, $subject, self::agent_body( $lead ), $headers );
     }
 
-    private static function agent_template( $lead ) {
-        ob_start(); ?>
-        <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px">
-            <h2 style="color:#4F46E5">New Lead — Big Chatbot</h2>
-            <table style="width:100%;border-collapse:collapse">
-                <tr><td style="padding:8px;font-weight:bold">Name</td><td style="padding:8px"><?php echo esc_html( $lead['name'] ); ?></td></tr>
-                <tr style="background:#f9fafb"><td style="padding:8px;font-weight:bold">Email</td><td style="padding:8px"><?php echo esc_html( $lead['email'] ); ?></td></tr>
-                <tr><td style="padding:8px;font-weight:bold">Phone</td><td style="padding:8px"><?php echo esc_html( $lead['phone'] ); ?></td></tr>
-                <tr style="background:#f9fafb"><td style="padding:8px;font-weight:bold">Query</td><td style="padding:8px"><?php echo esc_html( $lead['query'] ); ?></td></tr>
-            </table>
-        </div>
-        <?php return ob_get_clean();
+    public static function notify_lead( array $lead ) {
+        $s = self::settings();
+        if ( empty( $s['auto_reply'] ) || empty( $lead['email'] ) ) {
+            return;
+        }
+        $subject = ! empty( $s['auto_reply_subject'] ) ? $s['auto_reply_subject'] : 'Thanks for reaching out!';
+        $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+        wp_mail( sanitize_email( $lead['email'] ), $subject, self::lead_body( $lead, $s ), $headers );
     }
 
-    private static function lead_template( $lead ) {
-        $options = get_option( 'bigchat_settings', array() );
-        $bot_name = isset( $options['bot_name'] ) ? esc_html( $options['bot_name'] ) : 'Big Chatbot';
-        ob_start(); ?>
-        <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px">
-            <h2 style="color:#4F46E5">Thanks for reaching out, <?php echo esc_html( $lead['name'] ); ?>!</h2>
-            <p>We received your message and will get back to you shortly.</p>
-            <p style="color:#6b7280;font-size:13px">— <?php echo $bot_name; ?></p>
-        </div>
-        <?php return ob_get_clean();
+    private static function agent_body( array $lead ) {
+        $rows = '';
+        $fields = array(
+            'Name'  => $lead['name']  ?? '',
+            'Email' => $lead['email'] ?? '',
+            'Phone' => $lead['phone'] ?? '',
+            'Query' => $lead['query'] ?? '',
+        );
+        $alt = false;
+        foreach ( $fields as $label => $val ) {
+            $bg    = $alt ? '#f9fafb' : '#ffffff';
+            $rows .= '<tr style="background:' . $bg . '">';
+            $rows .= '<td style="padding:8px 12px;font-weight:600;width:80px">' . esc_html( $label ) . '</td>';
+            $rows .= '<td style="padding:8px 12px">' . esc_html( $val ) . '</td></tr>';
+            $alt   = ! $alt;
+        }
+        return '<div style="font-family:sans-serif;max-width:560px;margin:auto;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+             . '<div style="background:#4F46E5;padding:16px 20px;color:#fff;font-size:16px;font-weight:700">New Lead - Big Chatbot</div>'
+             . '<table style="width:100%;border-collapse:collapse">' . $rows . '</table></div>';
+    }
+
+    private static function lead_body( array $lead, array $s ) {
+        $name     = esc_html( $lead['name'] ?? 'there' );
+        $bot_name = esc_html( $s['bot_name'] ?? 'Big Chatbot' );
+        return '<div style="font-family:sans-serif;max-width:560px;margin:auto;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+             . '<div style="background:#4F46E5;padding:16px 20px;color:#fff;font-size:16px;font-weight:700">' . $bot_name . '</div>'
+             . '<div style="padding:20px"><p>Hi ' . $name . ',</p>'
+             . '<p>Thanks for reaching out! We have received your message and will get back to you shortly.</p>'
+             . '<p style="color:#6b7280;font-size:13px">- ' . $bot_name . '</p></div></div>';
     }
 }

@@ -1,61 +1,74 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
-class Big_Chatbot_Core {
+class BigChat_Core {
 
-    public static function init() {
-        add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
-        add_action( 'wp_footer',          array( __CLASS__, 'render_widget' ) );
-        add_action( 'wp_ajax_bigchat_message',        array( __CLASS__, 'handle_message' ) );
-        add_action( 'wp_ajax_nopriv_bigchat_message', array( __CLASS__, 'handle_message' ) );
+    public static function boot() {
+        add_action( 'wp_enqueue_scripts',         array( __CLASS__, 'assets' ) );
+        add_action( 'wp_footer',                  array( __CLASS__, 'widget' ) );
+        add_action( 'wp_ajax_bigchat_step',        array( __CLASS__, 'ajax_step' ) );
+        add_action( 'wp_ajax_nopriv_bigchat_step', array( __CLASS__, 'ajax_step' ) );
+        add_action( 'wp_ajax_bigchat_lead',        array( __CLASS__, 'ajax_lead' ) );
+        add_action( 'wp_ajax_nopriv_bigchat_lead', array( __CLASS__, 'ajax_lead' ) );
     }
 
-    public static function enqueue_assets() {
-        $options = get_option( 'bigchat_settings', array() );
-        $disabled_pages = isset( $options['disabled_pages'] ) ? $options['disabled_pages'] : array();
-        if ( is_page( $disabled_pages ) ) return;
-
+    public static function assets() {
         wp_enqueue_style(
             'big-chatbot',
             BIGCHAT_URL . 'assets/css/chatbot.css',
             array(),
-            BIGCHAT_VERSION
+            BIGCHAT_VER
         );
         wp_enqueue_script(
             'big-chatbot',
             BIGCHAT_URL . 'assets/js/chatbot.js',
             array(),
-            BIGCHAT_VERSION,
+            BIGCHAT_VER,
             true
         );
-        wp_localize_script( 'big-chatbot', 'BigChatConfig', array(
-            'ajax_url'    => admin_url( 'admin-ajax.php' ),
-            'nonce'       => wp_create_nonce( 'bigchat_nonce' ),
-            'bot_name'    => isset( $options['bot_name'] )    ? esc_js( $options['bot_name'] )    : 'Big Chatbot',
-            'bot_color'   => isset( $options['bot_color'] )   ? esc_js( $options['bot_color'] )   : '#4F46E5',
-            'greeting'    => isset( $options['greeting'] )    ? esc_js( $options['greeting'] )    : 'Hi there! 👋 How can I help you today?',
-            'whatsapp_no' => isset( $options['whatsapp_no'] ) ? esc_js( $options['whatsapp_no'] ) : '',
-            'position'    => isset( $options['position'] )    ? esc_js( $options['position'] )    : 'right',
+        $s = get_option( 'bigchat_settings', array() );
+        wp_localize_script( 'big-chatbot', 'BigChat', array(
+            'ajax'     => admin_url( 'admin-ajax.php' ),
+            'nonce'    => wp_create_nonce( 'bigchat' ),
+            'name'     => isset( $s['bot_name'] )    ? esc_js( $s['bot_name'] )    : 'Support',
+            'color'    => isset( $s['bot_color'] )   ? esc_js( $s['bot_color'] )   : '#4F46E5',
+            'greeting' => isset( $s['greeting'] )    ? esc_js( $s['greeting'] )    : 'Hi! How can I help you?',
+            'wa'       => isset( $s['whatsapp_no'] )  ? esc_js( $s['whatsapp_no'] ) : '',
         ) );
     }
 
-    public static function render_widget() {
-        include BIGCHAT_PATH . 'templates/chat-widget.php';
+    public static function widget() {
+        include BIGCHAT_DIR . 'templates/chat-widget.php';
     }
 
-    /**
-     * AJAX handler — matches user message to flow steps
-     */
-    public static function handle_message() {
-        check_ajax_referer( 'bigchat_nonce', 'nonce' );
+    /* ---- AJAX: get flow step ---- */
+    public static function ajax_step() {
+        check_ajax_referer( 'bigchat', 'nonce' );
+        $step = isset( $_POST['step'] ) ? sanitize_key( wp_unslash( $_POST['step'] ) ) : 'start';
+        $tpl  = get_option( 'bigchat_active_template', 'generic' );
+        $flow = bigchat_get_flow( $tpl );
+        $data = bigchat_process_step( $flow, $step );
+        wp_send_json_success( $data );
+    }
 
-        $message  = isset( $_POST['message'] ) ? sanitize_text_field( wp_unslash( $_POST['message'] ) ) : '';
-        $step     = isset( $_POST['step'] )    ? sanitize_text_field( wp_unslash( $_POST['step'] ) )    : 'start';
-        $template = get_option( 'bigchat_active_template', 'generic' );
-
-        $flow     = bigchat_get_flow( $template );
-        $response = bigchat_process_step( $flow, $step, $message );
-
-        wp_send_json_success( $response );
+    /* ---- AJAX: submit lead ---- */
+    public static function ajax_lead() {
+        check_ajax_referer( 'bigchat', 'nonce' );
+        $lead = array(
+            'name'  => isset( $_POST['name'] )  ? sanitize_text_field( wp_unslash( $_POST['name'] ) )      : '',
+            'email' => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) )           : '',
+            'phone' => isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) )      : '',
+            'query' => isset( $_POST['query'] ) ? sanitize_textarea_field( wp_unslash( $_POST['query'] ) )  : '',
+        );
+        if ( empty( $lead['name'] ) || empty( $lead['email'] ) ) {
+            wp_send_json_error( array( 'msg' => 'Name and email are required.' ) );
+        }
+        $id = BigChat_Lead_Handler::save( $lead );
+        if ( ! $id ) {
+            wp_send_json_error( array( 'msg' => 'Could not save lead.' ) );
+        }
+        BigChat_Email_Handler::notify_agent( $lead );
+        BigChat_Email_Handler::notify_lead( $lead );
+        wp_send_json_success( array( 'id' => $id ) );
     }
 }
