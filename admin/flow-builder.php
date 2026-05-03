@@ -1,7 +1,6 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-/* bigchat_builder_page() is called by the submenu registered in admin-page.php */
 function bigchat_builder_page() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorised' );
 
@@ -19,70 +18,103 @@ function bigchat_builder_page() {
         true
     );
     ?>
-    <div class="wrap" id="bcb-wrap">
-        <h1>Big Chatbot &mdash; Flow Builder
-            <button id="bcb-save-btn" class="button button-primary" style="margin-left:12px">Save Flow</button>
-            <button id="bcb-test-btn" class="button" style="margin-left:6px">&#9654; Test Chat</button>
-            <button id="bcb-export-btn" class="button" style="margin-left:6px">Export JSON</button>
-            <label class="button" style="margin-left:6px;cursor:pointer">Import JSON<input type="file" id="bcb-import-file" accept=".json" style="display:none"></label>
-            <span id="bcb-status" style="margin-left:14px;font-size:13px;color:#6b7280"></span>
-        </h1>
+    <div id="bcb-wrap">
 
+        <!-- Toolbar -->
+        <div id="bcb-toolbar">
+            <h1>Big Chatbot &mdash; Flow Builder</h1>
+            <button id="bcb-save-btn"  class="bcb-tb-btn bcb-tb-primary">&#128190; Save Flow</button>
+            <button id="bcb-test-btn"  class="bcb-tb-btn bcb-tb-ghost">&#9654; Test Chat</button>
+            <button id="bcb-export-btn" class="bcb-tb-btn bcb-tb-ghost">&#8681; Export</button>
+            <label class="bcb-tb-btn bcb-tb-ghost" style="cursor:pointer">&#8679; Import<input type="file" id="bcb-import-file" accept=".json" style="display:none"></label>
+            <button id="bcb-clear-btn" class="bcb-tb-btn bcb-tb-danger">&#10006; Clear</button>
+            <span id="bcb-status"></span>
+            <div id="bcb-zoom-ctr">
+                <button id="bcb-zoom-out" title="Zoom Out">&#8722;</button>
+                <span id="bcb-zoom-label">100%</span>
+                <button id="bcb-zoom-in" title="Zoom In">&#43;</button>
+                <button id="bcb-zoom-fit" title="Fit to Screen" style="padding:0 8px;width:auto">Fit</button>
+            </div>
+        </div>
+
+        <!-- Shell -->
         <div id="bcb-shell">
+
+            <!-- Palette -->
             <div id="bcb-palette">
-                <p class="bcb-palette-title">Drag to Canvas</p>
-                <div class="bcb-node-pill" draggable="true" data-type="message">&#128172; Message</div>
-                <div class="bcb-node-pill" draggable="true" data-type="buttons">&#128073; Buttons</div>
-                <div class="bcb-node-pill" draggable="true" data-type="lead_form">&#128203; Lead Form</div>
-                <div class="bcb-node-pill" draggable="true" data-type="whatsapp">&#128241; WhatsApp</div>
-                <div class="bcb-node-pill" draggable="true" data-type="end">&#9989; End</div>
-                <hr style="border-color:#e5e7eb;margin:14px 0">
-                <p class="bcb-palette-title">Quick Load</p>
+                <div class="bcb-pal-section">Message Nodes</div>
+                <div class="bcb-node-pill bcb-np-msg" draggable="true" data-type="message">&#128172; Message</div>
+                <div class="bcb-node-pill bcb-np-btn" draggable="true" data-type="buttons">&#128073; Buttons</div>
+
+                <div class="bcb-pal-section">Logic</div>
+                <div class="bcb-node-pill bcb-np-cond" draggable="true" data-type="condition">&#9889; Condition Split</div>
+                <div class="bcb-node-pill bcb-np-delay" draggable="true" data-type="delay">&#9201; Delay</div>
+
+                <div class="bcb-pal-section">Actions</div>
+                <div class="bcb-node-pill bcb-np-lead" draggable="true" data-type="lead_form">&#128203; Lead Form</div>
+                <div class="bcb-node-pill bcb-np-wa" draggable="true" data-type="whatsapp">&#128241; WhatsApp</div>
+                <div class="bcb-node-pill bcb-np-end" draggable="true" data-type="end">&#9989; End</div>
+
+                <div class="bcb-pal-section" style="margin-top:16px">Quick Load</div>
                 <?php
-                $templates = array(
+                foreach ( array(
                     'generic'    => 'Generic',
                     'agency'     => 'Agency',
                     'clinic'     => 'Clinic',
                     'restaurant' => 'Restaurant',
                     'realestate' => 'Real Estate',
-                );
-                foreach ( $templates as $k => $v ) :
+                ) as $k => $v ) :
                 ?>
-                <button class="bcb-tpl-btn button" data-tpl="<?php echo esc_attr( $k ); ?>" style="width:100%;margin-bottom:5px;text-align:left"><?php echo esc_html( $v ); ?></button>
+                <button class="bcb-pal-tpl-btn" data-tpl="<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $v ); ?></button>
                 <?php endforeach; ?>
             </div>
 
+            <!-- Canvas -->
             <div id="bcb-canvas-wrap">
-                <svg id="bcb-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-                <div id="bcb-canvas"></div>
+                <div id="bcb-viewport">
+                    <svg id="bcb-svg"></svg>
+                    <div id="bcb-canvas"></div>
+                </div>
+                <!-- Minimap -->
+                <div id="bcb-minimap">
+                    <canvas id="bcb-minimap-canvas"></canvas>
+                    <div id="bcb-minimap-viewport"></div>
+                </div>
             </div>
 
+            <!-- Editor panel -->
             <div id="bcb-editor" hidden>
                 <div id="bcb-editor-inner">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                        <strong id="bcb-editor-title">Edit Node</strong>
-                        <button id="bcb-editor-close" style="background:none;border:none;font-size:18px;cursor:pointer">&times;</button>
+                        <span id="bcb-editor-title">Edit Node</span>
+                        <button id="bcb-editor-close" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer">&times;</button>
                     </div>
                     <div id="bcb-editor-fields"></div>
-                    <div style="margin-top:12px;display:flex;gap:8px">
-                        <button id="bcb-editor-save" class="button button-primary">Apply</button>
-                        <button id="bcb-editor-delete" class="button" style="color:#dc2626;border-color:#dc2626">Delete Node</button>
-                    </div>
+                </div>
+                <div class="bcb-editor-actions">
+                    <button id="bcb-editor-save" class="bcb-ea-apply">&#10003; Apply</button>
+                    <button id="bcb-editor-delete" class="bcb-ea-delete">Delete</button>
                 </div>
             </div>
-        </div>
 
+        </div><!-- /shell -->
+
+        <!-- Context menu -->
+        <div id="bcb-ctx" hidden></div>
+
+        <!-- Test modal -->
         <div id="bcb-test-modal" hidden>
             <div id="bcb-test-inner">
-                <div id="bcb-test-head">Test Chat Preview <button id="bcb-test-close">&times;</button></div>
+                <div id="bcb-test-head">&#9654; Test Chat Preview <button id="bcb-test-close">&times;</button></div>
                 <div id="bcb-test-msgs"></div>
                 <div id="bcb-test-foot">
-                    <input id="bcb-test-in" type="text" placeholder="Type..." autocomplete="off">
+                    <input id="bcb-test-in" type="text" placeholder="Type a message..." autocomplete="off">
                     <button id="bcb-test-send">&#10148;</button>
                 </div>
             </div>
         </div>
-    </div>
+
+    </div><!-- /bcb-wrap -->
 
     <script>
     window.BigChatBuilder = {
