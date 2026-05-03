@@ -1,180 +1,361 @@
 /* Big Chatbot — Light Mode: White / Green / Black */
 :root{
---bc-p:#16a34a;--bc-ph:#15803d;
---bc-bg:#ffffff;--bc-surf:#f8fafb;--bc-bdr:#e2e8f0;
---bc-tx:#0f172a;--bc-mu:#64748b;
---bc-bot:#f0fdf4;--bc-bot-bdr:#bbf7d0;
---bc-usr:#16a34a;--bc-utx:#ffffff;
---bc-r:16px;--bc-sh:0 8px 40px rgba(0,0,0,.12);
---bc-w:360px;--bc-h:530px;--bc-bub:54px;
---bc-font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --bc-p:#16a34a;
+  --bc-ph:#15803d;
+  --bc-bg:#ffffff;
+  --bc-surf:#f8fafb;
+  --bc-bdr:#e2e8f0;
+  --bc-tx:#0f172a;
+  --bc-mu:#64748b;
+  --bc-bot:#f0fdf4;
+  --bc-bot-bdr:#bbf7d0;
+  --bc-usr:#16a34a;
+  --bc-utx:#ffffff;
+  --bc-r:16px;
+  --bc-sh:0 8px 40px rgba(0,0,0,.12);
+  --bc-w:360px;
+  --bc-bub:54px;
+  --bc-font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 
-/* ── Wrap ── */
-#bc-wrap{position:fixed;bottom:22px;z-index:99999;font-family:var(--bc-font);}
-.bc-pos-right{right:22px;}.bc-pos-left{left:22px;}
+/* Wrap */
+#bc-wrap{
+  position:fixed !important;
+  bottom:22px;
+  z-index:2147483647 !important;
+  font-family:var(--bc-font);
+}
+.bc-pos-right{right:22px !important;}
+.bc-pos-left{left:22px !important;}
 
-/* ── Launcher button ── */
+/* Launcher */
 #bc-btn{
   width:var(--bc-bub);height:var(--bc-bub);border-radius:50%;
-  border:none;cursor:pointer;background:var(--bc-p);color:#fff;
+  border:none !important;cursor:pointer;
+  background:var(--bc-p) !important;color:#fff !important;
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 4px 18px rgba(22,163,74,.45);
-  transition:transform .2s,background .2s;outline:none;
+  transition:transform .2s,background .2s;
+  outline:none;
+  padding:0 !important;
 }
-#bc-btn:hover{background:var(--bc-ph);transform:scale(1.07);}
+#bc-btn:hover{background:var(--bc-ph) !important;transform:scale(1.07);}
 
 /* ── Chat window ── */
+/*
+  KEY FIX: No fixed height. Use max-height + flex column so the form
+  always fits and the button is never clipped.
+*/
 #bc-win{
-  position:absolute;bottom:calc(var(--bc-bub) + 10px);
-  width:var(--bc-w);height:var(--bc-h);
-  background:var(--bc-bg);border-radius:var(--bc-r);
-  box-shadow:var(--bc-sh);border:1px solid var(--bc-bdr);
-  display:flex;flex-direction:column;overflow:hidden;
+  position:absolute;
+  bottom:calc(var(--bc-bub) + 10px);
+  width:var(--bc-w);
+  /* max-height instead of fixed height — window grows up to 580px */
+  max-height:580px;
+  min-height:200px;
+  background:var(--bc-bg);
+  border-radius:var(--bc-r);
+  box-shadow:var(--bc-sh);
+  border:1px solid var(--bc-bdr);
+  /* flex column: msgs flex-shrinks, form + footer are fixed at bottom */
+  display:flex;
+  flex-direction:column;
+  /* NO overflow:hidden — that was clipping the button */
+  overflow:visible;
   animation:bc-up .22s ease;
+  border-radius:var(--bc-r);
 }
-.bc-pos-right #bc-win{right:0;}.bc-pos-left #bc-win{left:0;}
-#bc-win[hidden]{display:none;}
-@keyframes bc-up{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.bc-pos-right #bc-win{right:0;}
+.bc-pos-left  #bc-win{left:0;}
+#bc-win[hidden]{display:none !important;}
+@keyframes bc-up{
+  from{opacity:0;transform:translateY(10px) scale(.97)}
+  to  {opacity:1;transform:none}
+}
 
-/* ── Header ── */
+/* Header */
 #bc-head{
-  background:var(--bc-p);color:#fff;
-  padding:13px 14px;
-  display:flex;align-items:center;gap:10px;flex-shrink:0;
+  background:var(--bc-p);
+  color:#fff;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+  border-radius:var(--bc-r) var(--bc-r) 0 0;
   border-bottom:3px solid var(--bc-ph);
 }
 #bc-avatar{font-size:22px;line-height:1;}
 #bc-name{flex:1;font-weight:700;font-size:14px;letter-spacing:.2px;}
-#bc-badge{
-  display:flex;align-items:center;gap:5px;
-  font-size:11px;font-weight:500;opacity:.9;
+#bc-x{
+  background:none !important;border:none !important;
+  color:#fff !important;font-size:20px;cursor:pointer;
+  opacity:.8;line-height:1;padding:2px 5px;
+  box-shadow:none !important;
 }
-#bc-badge-dot{width:7px;height:7px;background:#bbf7d0;border-radius:50%;animation:bc-pulse 2s infinite;}
-@keyframes bc-pulse{0%,100%{opacity:1}50%{opacity:.4}}
-#bc-x{background:none;border:none;color:#fff;font-size:18px;cursor:pointer;opacity:.75;line-height:1;padding:2px 4px;}
 #bc-x:hover{opacity:1;}
 
-/* ── Messages ── */
+/* Messages — flex:1 so it fills available space and scrolls */
 #bc-msgs{
-  flex:1;overflow-y:auto;padding:14px 12px;
-  display:flex;flex-direction:column;gap:9px;
-  scroll-behavior:smooth;background:var(--bc-bg);
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:14px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  scroll-behavior:smooth;
+  background:var(--bc-bg);
+  /* min-height prevents it collapsing to 0 when form is shown */
+  min-height:80px;
 }
 #bc-msgs::-webkit-scrollbar{width:3px;}
 #bc-msgs::-webkit-scrollbar-thumb{background:var(--bc-bdr);border-radius:3px;}
 
-/* message bubbles */
+/* Bubbles */
 .bm{display:flex;flex-direction:column;max-width:82%;gap:3px;}
-.bm.bot{align-self:flex-start;}.bm.usr{align-self:flex-end;}
+.bm.bot{align-self:flex-start;}
+.bm.usr{align-self:flex-end;}
 .bm-b{
-  padding:10px 14px;border-radius:14px;
-  font-size:13px;line-height:1.55;word-break:break-word;
+  padding:10px 14px;
+  border-radius:14px;
+  font-size:13px;
+  line-height:1.55;
+  word-break:break-word;
 }
 .bot .bm-b{
-  background:var(--bc-bot);color:var(--bc-tx);
+  background:var(--bc-bot);
+  color:var(--bc-tx);
   border:1px solid var(--bc-bot-bdr);
   border-bottom-left-radius:3px;
 }
 .usr .bm-b{
-  background:var(--bc-usr);color:var(--bc-utx);
+  background:var(--bc-usr);
+  color:var(--bc-utx);
   border-bottom-right-radius:3px;
 }
 .bm-t{font-size:10px;color:var(--bc-mu);}
-.bot .bm-t{align-self:flex-start;}.usr .bm-t{align-self:flex-end;}
+.bot .bm-t{align-self:flex-start;}
+.usr .bm-t{align-self:flex-end;}
 
-/* typing indicator */
-.bc-typing .bm-b{background:var(--bc-bot);border:1px solid var(--bc-bot-bdr);padding:13px 15px;}
+/* Typing */
+.bc-typing .bm-b{
+  background:var(--bc-bot);
+  border:1px solid var(--bc-bot-bdr);
+  padding:13px 15px;
+}
 .bc-dots{display:flex;gap:4px;}
-.bc-dots span{width:7px;height:7px;background:#16a34a;border-radius:50%;opacity:.4;animation:bc-dot 1.2s infinite;}
+.bc-dots span{
+  width:7px;height:7px;
+  background:#16a34a;border-radius:50%;
+  opacity:.4;animation:bc-dot 1.2s infinite;
+}
 .bc-dots span:nth-child(2){animation-delay:.2s;}
 .bc-dots span:nth-child(3){animation-delay:.4s;}
-@keyframes bc-dot{0%,80%,100%{transform:scale(.8);opacity:.35}40%{transform:scale(1.15);opacity:1}}
+@keyframes bc-dot{
+  0%,80%,100%{transform:scale(.8);opacity:.35}
+  40%{transform:scale(1.15);opacity:1}
+}
 
-/* option buttons */
+/* Option buttons */
 .bc-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;}
 .bc-btn{
-  border:1.5px solid var(--bc-p);color:var(--bc-p);background:#fff;
-  border-radius:999px;padding:6px 15px;font-size:12px;font-weight:500;
-  cursor:pointer;font-family:var(--bc-font);transition:all .15s;
+  border:1.5px solid var(--bc-p) !important;
+  color:var(--bc-p) !important;
+  background:#fff !important;
+  border-radius:999px;
+  padding:6px 15px;
+  font-size:12px;font-weight:500;
+  cursor:pointer;
+  font-family:var(--bc-font);
+  transition:all .15s;
   box-shadow:0 1px 3px rgba(22,163,74,.08);
 }
-.bc-btn:hover{background:var(--bc-p);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.25);}
+.bc-btn:hover{
+  background:var(--bc-p) !important;
+  color:#fff !important;
+  box-shadow:0 2px 8px rgba(22,163,74,.25);
+}
 .bc-btn:disabled{opacity:.45;cursor:default;}
 
-/* WhatsApp CTA */
+/* WhatsApp */
 .bc-wa{
   display:inline-flex;align-items:center;gap:8px;
-  background:#25D366;color:#fff;border:none;border-radius:10px;
+  background:#25D366 !important;color:#fff !important;
+  border:none !important;border-radius:10px;
   padding:10px 20px;font-size:13px;font-weight:700;
   cursor:pointer;text-decoration:none;margin-top:6px;
   box-shadow:0 3px 12px rgba(37,211,102,.3);
   transition:background .2s,box-shadow .2s;
 }
-.bc-wa:hover{background:#1fb356;color:#fff;box-shadow:0 4px 16px rgba(37,211,102,.45);}
+.bc-wa:hover{
+  background:#1fb356 !important;
+  color:#fff !important;
+  box-shadow:0 4px 16px rgba(37,211,102,.45);
+}
 
-/* ── Lead Form ── */
+/* ────────────────────────────────────────
+   LEAD FORM
+   flex-shrink:0 so it never gets squashed;
+   overflow-y:auto so if screen is tiny it scrolls internally
+──────────────────────────────────────── */
 #bc-form{
-  padding:11px 12px;background:var(--bc-surf);
+  padding:12px;
+  background:var(--bc-surf);
   border-top:1px solid var(--bc-bdr);
-  display:flex;flex-direction:column;gap:8px;flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex-shrink:0;
+  /* scroll if viewport is too short */
+  overflow-y:auto;
+  max-height:320px;
 }
-#bc-form[hidden]{display:none;}
-#bc-form input,#bc-form textarea{
-  width:100%;padding:9px 12px;
-  border:1.5px solid var(--bc-bdr);border-radius:8px;
-  font-size:12px;font-family:var(--bc-font);color:var(--bc-tx);
-  background:#fff;box-sizing:border-box;outline:none;
-  transition:border-color .2s;
-}
-#bc-form input:focus,#bc-form textarea:focus{border-color:var(--bc-p);}
-#bc-form textarea{resize:none;}
-.bc-consent{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--bc-mu);}
-.bc-consent input[type=checkbox]{width:auto;margin-top:2px;flex-shrink:0;accent-color:var(--bc-p);}
-#bc-form button[type=submit]{
-  background:var(--bc-p);color:#fff;border:none;
-  border-radius:8px;padding:10px;font-size:13px;font-weight:700;
-  cursor:pointer;font-family:var(--bc-font);transition:background .2s;
-  letter-spacing:.3px;
-}
-#bc-form button[type=submit]:hover{background:var(--bc-ph);}
-#bc-form button[type=submit]:disabled{opacity:.6;cursor:default;}
+#bc-form[hidden]{display:none !important;}
 
-/* ── Footer input bar ── */
+#bc-form input,
+#bc-form textarea{
+  width:100% !important;
+  padding:9px 12px !important;
+  border:1.5px solid var(--bc-bdr) !important;
+  border-radius:8px !important;
+  font-size:12px !important;
+  font-family:var(--bc-font) !important;
+  color:var(--bc-tx) !important;
+  background:#fff !important;
+  box-sizing:border-box;
+  outline:none;
+  transition:border-color .2s;
+  /* reset any theme transforms */
+  -webkit-appearance:none;
+  appearance:none;
+  margin:0 !important;
+  box-shadow:none !important;
+}
+#bc-form input:focus,
+#bc-form textarea:focus{
+  border-color:var(--bc-p) !important;
+  box-shadow:0 0 0 3px rgba(22,163,74,.12) !important;
+}
+
+/*
+  SUBMIT BUTTON — full !important chain to beat any theme overrides.
+  position:relative + z-index ensure it is always on top and hittable.
+*/
+#bc-form button[type=submit]{
+  display:block !important;
+  width:100% !important;
+  background:var(--bc-p) !important;
+  color:#fff !important;
+  border:none !important;
+  border-radius:8px !important;
+  padding:11px 16px !important;
+  font-size:13px !important;
+  font-weight:700 !important;
+  cursor:pointer !important;
+  font-family:var(--bc-font) !important;
+  transition:background .2s;
+  letter-spacing:.3px;
+  box-shadow:0 2px 8px rgba(22,163,74,.3) !important;
+  position:relative;
+  z-index:10;
+  /* ensure it is never invisible */
+  opacity:1 !important;
+  visibility:visible !important;
+  pointer-events:auto !important;
+  text-transform:none !important;
+  -webkit-appearance:none !important;
+  appearance:none !important;
+}
+#bc-form button[type=submit]:hover{
+  background:var(--bc-ph) !important;
+  box-shadow:0 4px 14px rgba(22,163,74,.4) !important;
+}
+#bc-form button[type=submit]:disabled{
+  opacity:.6 !important;
+  cursor:default !important;
+}
+
+/* Footer bar */
 #bc-foot{
-  display:flex;gap:7px;padding:9px 10px;
+  display:flex;
+  gap:7px;
+  padding:9px 10px;
   border-top:1px solid var(--bc-bdr);
-  flex-shrink:0;background:var(--bc-bg);
+  flex-shrink:0;
+  background:var(--bc-bg);
 }
 #bc-in{
-  flex:1;padding:9px 14px;
-  border:1.5px solid var(--bc-bdr);border-radius:999px;
-  font-size:12px;outline:none;font-family:var(--bc-font);
-  color:var(--bc-tx);transition:border-color .2s;
-  background:#fff;
+  flex:1;
+  padding:9px 14px !important;
+  border:1.5px solid var(--bc-bdr) !important;
+  border-radius:999px !important;
+  font-size:12px !important;
+  outline:none;
+  font-family:var(--bc-font);
+  color:var(--bc-tx);
+  background:#fff !important;
+  transition:border-color .2s;
+  -webkit-appearance:none;
+  appearance:none;
+  box-shadow:none !important;
+  margin:0 !important;
 }
-#bc-in:focus{border-color:var(--bc-p);}
+#bc-in:focus{border-color:var(--bc-p) !important;}
+
 #bc-send{
   width:36px;height:36px;border-radius:50%;
-  background:var(--bc-p);color:#fff;border:none;font-size:15px;
-  cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--bc-p) !important;
+  color:#fff !important;
+  border:none !important;
+  font-size:15px;
+  cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
   box-shadow:0 2px 8px rgba(22,163,74,.3);
-  transition:background .2s,box-shadow .2s;
+  transition:background .2s;
+  padding:0 !important;
 }
-#bc-send:hover{background:var(--bc-ph);box-shadow:0 3px 12px rgba(22,163,74,.45);}
+#bc-send:hover{background:var(--bc-ph) !important;}
 
-/* ── Branding bar ── */
+/* Branding */
 #bc-brand{
-  text-align:center;padding:5px 0 7px;
-  font-size:10px;color:var(--bc-mu);
-  background:var(--bc-surf);border-top:1px solid var(--bc-bdr);
-  letter-spacing:.2px;flex-shrink:0;
+  text-align:center;
+  padding:5px 0 6px;
+  font-size:10px;
+  color:var(--bc-mu);
+  background:var(--bc-surf);
+  border-top:1px solid var(--bc-bdr);
+  letter-spacing:.2px;
+  flex-shrink:0;
+  border-radius:0 0 var(--bc-r) var(--bc-r);
 }
-#bc-brand a{color:var(--bc-p);text-decoration:none;font-weight:600;}
+#bc-brand a{
+  color:var(--bc-p);
+  text-decoration:none;
+  font-weight:600;
+}
 #bc-brand a:hover{text-decoration:underline;}
 
-/* ── Mobile ── */
+/* Error message inside form */
+.bc-form-err{
+  color:#dc2626 !important;
+  font-size:11px;
+  margin:0;
+  padding:0;
+}
+
+/* Mobile */
 @media(max-width:480px){
-  .bc-pos-right,.bc-pos-left{right:8px;left:8px;bottom:12px;}
-  #bc-win{width:100%;right:0;left:0;height:90vh;max-height:520px;}
+  #bc-wrap.bc-pos-right,
+  #bc-wrap.bc-pos-left{
+    right:8px !important;
+    left:8px !important;
+    bottom:12px !important;
+  }
+  #bc-win{
+    width:calc(100vw - 16px) !important;
+    right:0;
+    left:0;
+    max-height:88vh;
+  }
 }
