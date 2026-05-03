@@ -1,8 +1,23 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
+/* bigchat_builder_page() is called by the submenu registered in admin-page.php */
 function bigchat_builder_page() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorised' );
+
+    wp_enqueue_style(
+        'bcb-style',
+        BIGCHAT_URL . 'assets/css/flow-builder.css',
+        array(),
+        BIGCHAT_VER
+    );
+    wp_enqueue_script(
+        'bcb-script',
+        BIGCHAT_URL . 'assets/js/flow-builder.js',
+        array(),
+        BIGCHAT_VER,
+        true
+    );
     ?>
     <div class="wrap" id="bcb-wrap">
         <h1>Big Chatbot &mdash; Flow Builder
@@ -14,7 +29,6 @@ function bigchat_builder_page() {
         </h1>
 
         <div id="bcb-shell">
-            <!-- Left: node palette -->
             <div id="bcb-palette">
                 <p class="bcb-palette-title">Drag to Canvas</p>
                 <div class="bcb-node-pill" draggable="true" data-type="message">&#128172; Message</div>
@@ -38,13 +52,11 @@ function bigchat_builder_page() {
                 <?php endforeach; ?>
             </div>
 
-            <!-- Centre: canvas -->
             <div id="bcb-canvas-wrap">
                 <svg id="bcb-svg" xmlns="http://www.w3.org/2000/svg"></svg>
                 <div id="bcb-canvas"></div>
             </div>
 
-            <!-- Right: node editor -->
             <div id="bcb-editor" hidden>
                 <div id="bcb-editor-inner">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -60,7 +72,6 @@ function bigchat_builder_page() {
             </div>
         </div>
 
-        <!-- Test chat modal -->
         <div id="bcb-test-modal" hidden>
             <div id="bcb-test-inner">
                 <div id="bcb-test-head">Test Chat Preview <button id="bcb-test-close">&times;</button></div>
@@ -75,9 +86,9 @@ function bigchat_builder_page() {
 
     <script>
     window.BigChatBuilder = {
-        ajaxUrl: '<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>',
-        nonce:   '<?php echo esc_js( wp_create_nonce( 'bcb_nonce' ) ); ?>',
-        flow:    <?php echo wp_json_encode( get_option( 'bigchat_custom_flow', array() ) ); ?>,
+        ajaxUrl:   '<?php echo esc_js( admin_url( 'admin-ajax.php' ) ); ?>',
+        nonce:     '<?php echo esc_js( wp_create_nonce( 'bcb_nonce' ) ); ?>',
+        flow:      <?php echo wp_json_encode( get_option( 'bigchat_custom_flow', array() ) ); ?>,
         templates: <?php echo wp_json_encode( bigchat_get_all_templates() ); ?>
     };
     </script>
@@ -85,7 +96,6 @@ function bigchat_builder_page() {
 }
 
 function bigchat_get_all_templates() {
-    // returns all built-in flows as array for JS quick-load
     $result = array();
     foreach ( array( 'generic', 'agency', 'clinic', 'restaurant', 'realestate' ) as $t ) {
         $result[ $t ] = bigchat_get_flow( $t );
@@ -93,7 +103,6 @@ function bigchat_get_all_templates() {
     return $result;
 }
 
-/* --- AJAX: save flow --- */
 add_action( 'wp_ajax_bcb_save_flow', 'bcb_ajax_save_flow' );
 function bcb_ajax_save_flow() {
     check_ajax_referer( 'bcb_nonce', 'nonce' );
@@ -106,7 +115,6 @@ function bcb_ajax_save_flow() {
     wp_send_json_success( array( 'msg' => 'Flow saved!' ) );
 }
 
-/* --- AJAX: load built-in template into builder --- */
 add_action( 'wp_ajax_bcb_load_template', 'bcb_ajax_load_template' );
 function bcb_ajax_load_template() {
     check_ajax_referer( 'bcb_nonce', 'nonce' );
