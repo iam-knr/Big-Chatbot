@@ -31,7 +31,7 @@ class BigChat_Core {
             'ajax'     => admin_url( 'admin-ajax.php' ),
             'nonce'    => wp_create_nonce( 'bigchat' ),
             'name'     => isset( $s['bot_name'] )    ? esc_js( $s['bot_name'] )    : 'Support',
-            'color'    => isset( $s['bot_color'] )   ? esc_js( $s['bot_color'] )   : '#4F46E5',
+            'color'    => isset( $s['bot_color'] )   ? esc_js( $s['bot_color'] )   : '#16a34a',
             'greeting' => isset( $s['greeting'] )    ? esc_js( $s['greeting'] )    : 'Hi! How can I help you?',
             'wa'       => isset( $s['whatsapp_no'] )  ? esc_js( $s['whatsapp_no'] ) : '',
         ) );
@@ -54,19 +54,28 @@ class BigChat_Core {
     /* ---- AJAX: submit lead ---- */
     public static function ajax_lead() {
         check_ajax_referer( 'bigchat', 'nonce' );
-        $lead = array(
-            'name'  => isset( $_POST['name'] )  ? sanitize_text_field( wp_unslash( $_POST['name'] ) )      : '',
-            'email' => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) )           : '',
-            'phone' => isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) )      : '',
-            'query' => isset( $_POST['query'] ) ? sanitize_textarea_field( wp_unslash( $_POST['query'] ) )  : '',
-        );
-        if ( empty( $lead['name'] ) || empty( $lead['email'] ) ) {
-            wp_send_json_error( array( 'msg' => 'Name and email are required.' ) );
+
+        $name  = isset( $_POST['name'] )  ? sanitize_text_field( wp_unslash( $_POST['name'] ) )      : '';
+        $phone = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) )      : '';
+
+        // Only name + phone required now — email is optional
+        if ( empty( $name ) || empty( $phone ) ) {
+            wp_send_json_error( array( 'msg' => 'Name and phone number are required.' ) );
         }
+
+        $lead = array(
+            'name'             => $name,
+            'email'            => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) )                      : '',
+            'phone'            => $phone,
+            'query'            => isset( $_POST['query'] ) ? sanitize_textarea_field( wp_unslash( $_POST['query'] ) )              : '',
+            'conversation_log' => isset( $_POST['history'] ) ? sanitize_textarea_field( wp_unslash( $_POST['history'] ) )         : '',
+        );
+
         $id = BigChat_Lead_Handler::save( $lead );
         if ( ! $id ) {
             wp_send_json_error( array( 'msg' => 'Could not save lead.' ) );
         }
+
         BigChat_Email_Handler::notify_agent( $lead );
         BigChat_Email_Handler::notify_lead( $lead );
         wp_send_json_success( array( 'id' => $id ) );

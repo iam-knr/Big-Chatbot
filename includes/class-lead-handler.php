@@ -8,21 +8,36 @@ class BigChat_Lead_Handler {
         return $wpdb->prefix . 'bigchat_leads';
     }
 
+    /**
+     * Creates / upgrades the leads table.
+     * Added: conversation_log TEXT column to store full Q&A history.
+     */
     public static function create_table() {
         global $wpdb;
         $charset = $wpdb->get_charset_collate();
         $table   = self::table();
         $sql = "CREATE TABLE IF NOT EXISTS {$table} (
-            id         BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            name       VARCHAR(100) NOT NULL DEFAULT '',
-            email      VARCHAR(150) NOT NULL DEFAULT '',
-            phone      VARCHAR(30)  NOT NULL DEFAULT '',
-            query_text TEXT         NOT NULL,
-            created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            id                BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            name              VARCHAR(100) NOT NULL DEFAULT '',
+            email             VARCHAR(150) NOT NULL DEFAULT '',
+            phone             VARCHAR(30)  NOT NULL DEFAULT '',
+            query_text        TEXT         NOT NULL,
+            conversation_log  LONGTEXT     NOT NULL,
+            created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id)
         ) {$charset};";
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
+
+        // Add column if upgrading from older version without it
+        $col = $wpdb->get_var( $wpdb->prepare(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'conversation_log'",
+            DB_NAME, $table
+        ) );
+        if ( ! $col ) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $wpdb->query( "ALTER TABLE {$table} ADD COLUMN conversation_log LONGTEXT NOT NULL DEFAULT '' AFTER query_text" );
+        }
     }
 
     public static function save( array $data ) {
@@ -30,12 +45,13 @@ class BigChat_Lead_Handler {
         $inserted = $wpdb->insert(
             self::table(),
             array(
-                'name'       => sanitize_text_field( $data['name']  ?? '' ),
-                'email'      => sanitize_email( $data['email']      ?? '' ),
-                'phone'      => sanitize_text_field( $data['phone'] ?? '' ),
-                'query_text' => sanitize_textarea_field( $data['query'] ?? '' ),
+                'name'             => sanitize_text_field( $data['name']             ?? '' ),
+                'email'            => sanitize_email(      $data['email']            ?? '' ),
+                'phone'            => sanitize_text_field( $data['phone']            ?? '' ),
+                'query_text'       => sanitize_textarea_field( $data['query']        ?? '' ),
+                'conversation_log' => wp_kses_post(         $data['conversation_log'] ?? '' ),
             ),
-            array( '%s', '%s', '%s', '%s' )
+            array( '%s', '%s', '%s', '%s', '%s' )
         );
         return $inserted ? (int) $wpdb->insert_id : 0;
     }
