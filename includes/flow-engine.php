@@ -1,14 +1,17 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Returns conversation flow for the given template slug.
- * Custom overrides saved in DB are merged on top.
- */
 function bigchat_get_flow( $tpl = 'generic' ) {
 
-    $flows = array(
+    // If custom builder flow exists and active_template is 'custom', use it
+    if ( $tpl === 'custom' ) {
+        $builder = get_option( 'bigchat_custom_flow', array() );
+        if ( ! empty( $builder ) && isset( $builder['__nodes'] ) ) {
+            return bigchat_compile_builder_flow( $builder );
+        }
+    }
 
+    $flows = array(
         'generic' => array(
             'start' => array(
                 'msg'  => 'Hi there! How can I help you today?',
@@ -40,7 +43,6 @@ function bigchat_get_flow( $tpl = 'generic' ) {
             'whatsapp'  => array( 'msg' => 'Click below to open WhatsApp and chat with us directly!', 'action' => 'whatsapp' ),
             'thank_you' => array( 'msg' => 'Thank you! We have received your details and will be in touch soon.', 'btns' => array( array( 'label' => 'Main Menu', 'next' => 'start' ) ) ),
         ),
-
         'agency' => array(
             'start' => array(
                 'msg'  => 'Welcome! What brings you here today?',
@@ -51,73 +53,58 @@ function bigchat_get_flow( $tpl = 'generic' ) {
                     array( 'label' => 'WhatsApp Us',    'next' => 'whatsapp' ),
                 ),
             ),
-            'services' => array(
-                'msg'  => 'We offer Web Design, SEO, Social Media Marketing, Paid Ads and Branding. Which interests you?',
-                'btns' => array(
-                    array( 'label' => 'Web Design',   'next' => 'lead' ),
-                    array( 'label' => 'SEO',          'next' => 'lead' ),
-                    array( 'label' => 'Social Media', 'next' => 'lead' ),
-                    array( 'label' => 'Back',         'next' => 'start' ),
-                ),
-            ),
-            'portfolio' => array(
-                'msg'  => 'Check out our latest work at [your-portfolio-link]. Want to discuss a project?',
-                'btns' => array(
-                    array( 'label' => 'Yes, lets talk', 'next' => 'lead' ),
-                    array( 'label' => 'Main Menu',      'next' => 'start' ),
-                ),
-            ),
+            'services'  => array( 'msg' => 'We offer Web Design, SEO, Social Media Marketing, Paid Ads and Branding.', 'btns' => array(
+                array( 'label' => 'Web Design',   'next' => 'lead' ),
+                array( 'label' => 'SEO',          'next' => 'lead' ),
+                array( 'label' => 'Social Media', 'next' => 'lead' ),
+                array( 'label' => 'Back',         'next' => 'start' ),
+            ) ),
+            'portfolio' => array( 'msg' => 'Check out our latest work at [your-portfolio-link]. Want to discuss a project?', 'btns' => array(
+                array( 'label' => 'Yes, lets talk', 'next' => 'lead' ),
+                array( 'label' => 'Main Menu',      'next' => 'start' ),
+            ) ),
             'lead'      => array( 'msg' => 'Awesome! Leave your details and our team will reach out within 24 hours.', 'action' => 'lead_form' ),
             'whatsapp'  => array( 'msg' => 'Chat with our team directly on WhatsApp!', 'action' => 'whatsapp' ),
             'thank_you' => array( 'msg' => 'Thank you! Our team will contact you shortly.', 'btns' => array( array( 'label' => 'Main Menu', 'next' => 'start' ) ) ),
         ),
-
         'clinic' => array(
             'start' => array(
                 'msg'  => 'Welcome to our clinic. How can we assist you?',
                 'btns' => array(
-                    array( 'label' => 'Our Specialities',  'next' => 'specialities' ),
-                    array( 'label' => 'Book Appointment',  'next' => 'lead' ),
-                    array( 'label' => 'Clinic Hours',      'next' => 'hours' ),
-                    array( 'label' => 'WhatsApp Us',       'next' => 'whatsapp' ),
-                ),
-            ),
-            'specialities' => array(
-                'msg'  => 'We specialise in General Medicine, Dermatology, Orthopaedics and Paediatrics. Book an appointment?',
-                'btns' => array(
+                    array( 'label' => 'Our Specialities', 'next' => 'specialities' ),
                     array( 'label' => 'Book Appointment', 'next' => 'lead' ),
-                    array( 'label' => 'Main Menu',        'next' => 'start' ),
+                    array( 'label' => 'Clinic Hours',     'next' => 'hours' ),
+                    array( 'label' => 'WhatsApp Us',      'next' => 'whatsapp' ),
                 ),
             ),
+            'specialities' => array( 'msg' => 'We specialise in General Medicine, Dermatology, Orthopaedics and Paediatrics.', 'btns' => array(
+                array( 'label' => 'Book Appointment', 'next' => 'lead' ),
+                array( 'label' => 'Main Menu',        'next' => 'start' ),
+            ) ),
             'hours'     => array( 'msg' => 'Mon-Sat: 9 AM to 1 PM and 5 PM to 8 PM. Sundays by appointment only.', 'btns' => array( array( 'label' => 'Main Menu', 'next' => 'start' ) ) ),
             'lead'      => array( 'msg' => 'Please share your details to confirm your appointment.', 'action' => 'lead_form' ),
             'whatsapp'  => array( 'msg' => 'Chat with us on WhatsApp for quick assistance!', 'action' => 'whatsapp' ),
             'thank_you' => array( 'msg' => 'Appointment request received! We will confirm your slot shortly.', 'btns' => array( array( 'label' => 'Main Menu', 'next' => 'start' ) ) ),
         ),
-
         'restaurant' => array(
             'start' => array(
                 'msg'  => 'Welcome! What can we do for you?',
                 'btns' => array(
-                    array( 'label' => 'View Menu',       'next' => 'menu' ),
-                    array( 'label' => 'Reserve a Table', 'next' => 'lead' ),
+                    array( 'label' => 'View Menu',          'next' => 'menu' ),
+                    array( 'label' => 'Reserve a Table',    'next' => 'lead' ),
                     array( 'label' => 'Hours and Location', 'next' => 'hours' ),
-                    array( 'label' => 'WhatsApp Us',     'next' => 'whatsapp' ),
+                    array( 'label' => 'WhatsApp Us',        'next' => 'whatsapp' ),
                 ),
             ),
-            'menu'      => array(
-                'msg'  => 'View our full menu at [menu-link]. Ready to reserve a table?',
-                'btns' => array(
-                    array( 'label' => 'Reserve a Table', 'next' => 'lead' ),
-                    array( 'label' => 'Main Menu',       'next' => 'start' ),
-                ),
-            ),
+            'menu'      => array( 'msg' => 'View our full menu at [menu-link]. Ready to reserve a table?', 'btns' => array(
+                array( 'label' => 'Reserve a Table', 'next' => 'lead' ),
+                array( 'label' => 'Main Menu',       'next' => 'start' ),
+            ) ),
             'hours'     => array( 'msg' => 'Open daily 12 PM to 3 PM and 7 PM to 11 PM. Find us at [Address].', 'btns' => array( array( 'label' => 'Main Menu', 'next' => 'start' ) ) ),
             'lead'      => array( 'msg' => 'Share your details and preferred date and time for reservation.', 'action' => 'lead_form' ),
             'whatsapp'  => array( 'msg' => 'Chat with us on WhatsApp to make a quick reservation!', 'action' => 'whatsapp' ),
             'thank_you' => array( 'msg' => 'Reservation request received! We will confirm shortly.', 'btns' => array( array( 'label' => 'Main Menu', 'next' => 'start' ) ) ),
         ),
-
         'realestate' => array(
             'start' => array(
                 'msg'  => 'Welcome! Looking to buy, rent or sell a property?',
@@ -128,14 +115,11 @@ function bigchat_get_flow( $tpl = 'generic' ) {
                     array( 'label' => 'WhatsApp Agent', 'next' => 'whatsapp' ),
                 ),
             ),
-            'buy'  => array(
-                'msg'  => 'Great! What type of property are you looking for?',
-                'btns' => array(
-                    array( 'label' => 'Apartment', 'next' => 'lead' ),
-                    array( 'label' => 'Villa',     'next' => 'lead' ),
-                    array( 'label' => 'Plot',      'next' => 'lead' ),
-                ),
-            ),
+            'buy'       => array( 'msg' => 'Great! What type of property are you looking for?', 'btns' => array(
+                array( 'label' => 'Apartment', 'next' => 'lead' ),
+                array( 'label' => 'Villa',     'next' => 'lead' ),
+                array( 'label' => 'Plot',      'next' => 'lead' ),
+            ) ),
             'rent'      => array( 'msg' => 'Looking for rental properties? Share your requirements!', 'action' => 'lead_form' ),
             'lead'      => array( 'msg' => 'Leave your contact details and our agent will reach out with matching options!', 'action' => 'lead_form' ),
             'whatsapp'  => array( 'msg' => 'Connect with our property agent on WhatsApp!', 'action' => 'whatsapp' ),
@@ -143,7 +127,6 @@ function bigchat_get_flow( $tpl = 'generic' ) {
         ),
     );
 
-    /* merge DB custom overrides */
     $custom = get_option( 'bigchat_custom_flow_' . sanitize_key( $tpl ), array() );
     if ( ! empty( $custom ) && isset( $flows[ $tpl ] ) ) {
         $flows[ $tpl ] = array_merge( $flows[ $tpl ], $custom );
@@ -153,8 +136,72 @@ function bigchat_get_flow( $tpl = 'generic' ) {
 }
 
 /**
- * Returns the response data for a given step.
+ * Compiles the visual builder node/edge graph into the step-based flow
+ * format that the frontend flow engine consumes.
  */
+function bigchat_compile_builder_flow( $builder ) {
+    $nodes = isset( $builder['__nodes'] ) ? (array) $builder['__nodes'] : array();
+    $edges = isset( $builder['__edges'] ) ? (array) $builder['__edges'] : array();
+    $flow  = array();
+
+    // Build edge map: from+port => toNodeId
+    $edge_map = array();
+    foreach ( $edges as $edge ) {
+        $edge = (array) $edge;
+        $key  = $edge['from'] . ':' . $edge['fromPort'];
+        $edge_map[ $key ] = $edge['to'];
+    }
+
+    foreach ( $nodes as $id => $node ) {
+        $node = (array) $node;
+        $data = (array) ( $node['data'] ?? array() );
+        $type = $node['type'] ?? 'message';
+        $step = array(
+            'msg' => sanitize_text_field( $data['msg'] ?? '' ),
+        );
+
+        if ( $type === 'buttons' ) {
+            $btns     = isset( $data['btns'] ) ? (array) $data['btns'] : array();
+            $step_btns = array();
+            foreach ( $btns as $i => $label ) {
+                $next_id  = $edge_map[ $id . ':' . $i ] ?? null;
+                $step_btns[] = array(
+                    'label' => sanitize_text_field( $label ),
+                    'next'  => $next_id ?? '',
+                );
+            }
+            $step['btns'] = $step_btns;
+        } elseif ( in_array( $type, array( 'lead_form', 'whatsapp' ), true ) ) {
+            $step['action'] = $type;
+        } elseif ( $type === 'end' ) {
+            // end nodes just show message, no buttons
+        } else {
+            // message / start: single out edge
+            $next_id = $edge_map[ $id . ':0' ] ?? null;
+            if ( $next_id ) {
+                $step['btns'] = array(
+                    array( 'label' => 'Continue', 'next' => $next_id ),
+                );
+            }
+        }
+        $flow[ $id ] = $step;
+    }
+
+    // find start node id
+    foreach ( $nodes as $id => $node ) {
+        $node = (array) $node;
+        if ( ( $node['type'] ?? '' ) === 'start' ) {
+            // alias 'start' step to the start node id so engine can find it
+            if ( $id !== 'start' ) {
+                $flow['start'] = $flow[ $id ];
+            }
+            break;
+        }
+    }
+
+    return $flow;
+}
+
 function bigchat_process_step( $flow, $step ) {
     if ( ! isset( $flow[ $step ] ) ) {
         $step = 'start';
