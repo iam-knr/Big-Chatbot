@@ -167,10 +167,11 @@ function bigchat_get_all_templates() {
     return $result;
 }
 
-add_action( 'wp_ajax_bcb_save_flow', 'bcb_ajax_save_flow' );
-function bcb_ajax_save_flow() {
+add_action( 'wp_ajax_bcb_save_flow', 'bigchatbot_ajax_save_flow' );
+function bigchatbot_ajax_save_flow() {
     check_ajax_referer( 'bcb_nonce', 'nonce' );
     if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error();
+    // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
     $raw  = isset( $_POST['flow'] ) ? wp_unslash( $_POST['flow'] ) : '';
     $flow = json_decode( $raw, true );
     if ( ! is_array( $flow ) ) wp_send_json_error( array( 'msg' => 'Invalid flow JSON' ) );
@@ -179,16 +180,16 @@ function bcb_ajax_save_flow() {
 }
 
 /* New: Activate Flow — sets active_template = custom */
-add_action( 'wp_ajax_bcb_activate_flow', 'bcb_ajax_activate_flow' );
-function bcb_ajax_activate_flow() {
+add_action( 'wp_ajax_bcb_activate_flow', 'bigchatbot_ajax_activate_flow' );
+function bigchatbot_ajax_activate_flow() {
     check_ajax_referer( 'bcb_nonce', 'nonce' );
     if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error();
     update_option( 'bigchat_active_template', 'custom' );
     wp_send_json_success( array( 'msg' => 'Builder flow activated!' ) );
 }
 
-add_action( 'wp_ajax_bcb_load_template', 'bcb_ajax_load_template' );
-function bcb_ajax_load_template() {
+add_action( 'wp_ajax_bcb_load_template', 'bigchatbot_ajax_load_template' );
+function bigchatbot_ajax_load_template() {
     check_ajax_referer( 'bcb_nonce', 'nonce' );
     if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error();
     $tpl  = isset( $_POST['tpl'] ) ? sanitize_key( wp_unslash( $_POST['tpl'] ) ) : 'generic';

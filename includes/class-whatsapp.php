@@ -1,7 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-class Big_Whatsapp {
+class BigChatbot_Whatsapp {
 
     /**
      * Returns a wa.me deeplink URL.

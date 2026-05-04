@@ -35,13 +35,14 @@ class BigChat_Lead_Handler {
             DB_NAME, $table
         ) );
         if ( ! $col ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             $wpdb->query( "ALTER TABLE {$table} ADD COLUMN conversation_log LONGTEXT NOT NULL DEFAULT '' AFTER query_text" );
         }
     }
 
     public static function save( array $data ) {
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
         $inserted = $wpdb->insert(
             self::table(),
             array(
@@ -58,10 +59,11 @@ class BigChat_Lead_Handler {
 
     public static function get_all( $limit = 20, $offset = 0 ) {
         global $wpdb;
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $table = esc_sql( self::table() );
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         return $wpdb->get_results(
             $wpdb->prepare(
-                'SELECT * FROM ' . self::table() . ' ORDER BY created_at DESC LIMIT %d OFFSET %d',
+                "SELECT * FROM `{$table}` ORDER BY created_at DESC LIMIT %d OFFSET %d",
                 (int) $limit,
                 (int) $offset
             )
@@ -70,7 +72,10 @@ class BigChat_Lead_Handler {
 
     public static function count() {
         global $wpdb;
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-        return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::table() );
+        $table = esc_sql( self::table() );
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        return (int) $wpdb->get_var(
+            $wpdb->prepare( "SELECT COUNT(*) FROM `{$table}`" )
+        );
     }
 }

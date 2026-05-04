@@ -5,6 +5,7 @@ function bigchat_leads_page() {
     if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorised' );
 
     $per_page = 20;
+    // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination, no data mutation
     $page     = isset( $_GET['paged'] ) ? max( 1, (int) $_GET['paged'] ) : 1;
     $offset   = ( $page - 1 ) * $per_page;
     $leads    = BigChat_Lead_Handler::get_all( $per_page, $offset );

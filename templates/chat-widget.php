@@ -1,9 +1,9 @@
 <?php
 defined( 'ABSPATH' ) || exit;
-$_bc_s   = get_option( 'bigchat_settings', array() );
-$_bc_pos = ( isset( $_bc_s['position'] ) && $_bc_s['position'] === 'left' ) ? 'left' : 'right';
+$_bigchatbot_s   = get_option( 'bigchat_settings', array() );
+$_bigchatbot_pos = ( isset( $_bigchatbot_s['position'] ) && $_bigchatbot_s['position'] === 'left' ) ? 'left' : 'right';
 ?>
-<div id="bc-wrap" class="bc-pos-<?php echo esc_attr( $_bc_pos ); ?>" aria-live="polite">
+<div id="bc-wrap" class="bc-pos-<?php echo esc_attr( $_bigchatbot_pos ); ?>" aria-live="polite">
 
     <!-- Launcher FAB -->
     <button id="bc-btn" aria-label="Open chat" aria-expanded="false" aria-controls="bc-win" type="button">
