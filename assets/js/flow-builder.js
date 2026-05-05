@@ -31,9 +31,6 @@ var DEFS={
   msg_buttons:     {label:'Message + Buttons',     icon:'⬜',  cls:'bcb-type-msg_buttons', portsOut:'dynamic',        portsIn:true,   group:'messages'},
   msg_image:       {label:'Message + Image',       icon:'🖼️', cls:'bcb-type-msg_image',   portsOut:['out'],          portsIn:true,   group:'messages'},
   msg_video:       {label:'Message + Video',       icon:'📹',  cls:'bcb-type-msg_video',   portsOut:['out'],          portsIn:true,   group:'messages'},
-  msg_list:        {label:'Message + List',        icon:'≡',   cls:'bcb-type-msg_list',    portsOut:'dynamic',        portsIn:true,   group:'messages'},
-  wa_form:         {label:'WA Form Message',       icon:'📋',  cls:'bcb-type-wa_form',     portsOut:['on_submit'],    portsIn:true,   group:'messages'},
-  carousel:        {label:'Message + Carousel',    icon:'⊞',   cls:'bcb-type-carousel',    portsOut:['out'],          portsIn:true,   group:'messages'},
   condition:       {label:'Set a Condition',       icon:'⚡',  cls:'bcb-type-condition',   portsOut:['Yes','No'],     portsIn:true,   group:'logic'},
   webhook:         {label:'Trigger Webhook',       icon:'</>',  cls:'bcb-type-webhook',     portsOut:['success','fail'],portsIn:true,  group:'logic'},
   update_field:    {label:'Update Field / Tag',    icon:'🏷️', cls:'bcb-type-update_field',portsOut:['out'],          portsIn:true,   group:'logic'},
@@ -49,7 +46,7 @@ var DEFS={
 };
 
 var PALETTE_GROUPS=[
-  {label:'Messages', nodes:['message','msg_buttons','msg_image','msg_video','msg_list','wa_form','carousel']},
+  {label:'Messages', nodes:['message','msg_buttons','msg_image','msg_video']},
   {label:'Logic',    nodes:['condition','webhook','update_field','conversion','assign_agent','payment','clear_var','calculate','delay']},
   {label:'Actions',  nodes:['lead_form','whatsapp','end']},
 ];
@@ -126,9 +123,6 @@ function defaultData(type){
     case 'msg_buttons':  return {msg:'Choose an option:',btns:['Option 1','Option 2']};
     case 'msg_image':    return {msg:'Check this out!',image_url:''};
     case 'msg_video':    return {msg:'Watch this video:',video_url:''};
-    case 'msg_list':     return {msg:'Here are your options:',items:['Item 1','Item 2','Item 3']};
-    case 'wa_form':      return {msg:'Please fill out this form.',template_name:''};
-    case 'carousel':     return {msg:'',cards:[{title:'Card 1',subtitle:'',image_url:'',btn:'View'}]};
     case 'condition':    return {field:'email',operator:'exists',value:''};
     case 'webhook':      return {url:'https://',method:'POST',payload:'{}'};
     case 'update_field': return {field:'',value:'',tag:''};
@@ -235,18 +229,6 @@ function buildPreview(n){
     case 'msg_video':
       return (d.msg?'<div class="bcb-node-body-preview">'+escH((d.msg).substring(0,60))+'</div>':'')
              +(d.video_url?'<div class="bcb-preview-url">📹 '+escH(d.video_url.substring(0,40))+'</div>':'<div class="bcb-preview-dim">📹 No video URL set</div>');
-    case 'msg_list':
-      var items=(d.items||[]);var ihtml='';
-      items.slice(0,3).forEach(function(it){ihtml+='<div class="bcb-preview-list-item">• '+escH(it)+'</div>';});
-      if(items.length>3)ihtml+='<div class="bcb-preview-dim">+' +(items.length-3)+' more</div>';
-      return (d.msg?'<div class="bcb-node-body-preview">'+escH((d.msg).substring(0,50))+'</div>':'')+ihtml;
-    case 'carousel':
-      var cards=d.cards||[];var chtml='';
-      cards.slice(0,2).forEach(function(c){chtml+='<div class="bcb-preview-card">'+escH(c.title||'Card')+'</div>';});
-      if(cards.length>2)chtml+='<span class="bcb-preview-dim">+' +(cards.length-2)+' cards</span>';
-      return chtml;
-    case 'wa_form':
-      return '<span class="bcb-preview-dim">Template: <b>'+escH(d.template_name||'(not set)')+'</b></span>';
     default:
       return d.msg?'<div class="bcb-node-body-preview">'+escH((d.msg).substring(0,80))+'</div>':'';
   }
@@ -589,7 +571,7 @@ function updateMinimap(){
   /* node blocks */
   var nodeColors={
     start:'#059669',message:'#4f46e5',msg_buttons:'#7c3aed',msg_image:'#2563eb',
-    msg_video:'#7c3aed',msg_list:'#0891b2',wa_form:'#d97706',carousel:'#9333ea',
+    msg_video:'#7c3aed',
     condition:'#0891b2',webhook:'#475569',update_field:'#b45309',conversion:'#dc2626',
     assign_agent:'#0284c7',payment:'#16a34a',clear_var:'#64748b',calculate:'#7c3aed',
     delay:'#475569',lead_form:'#d97706',whatsapp:'#16a34a',end:'#dc2626'
@@ -681,7 +663,7 @@ function buildEditorHTML(n){
   var h='';
 
   /* Shared message field */
-  var skipMsg=['condition','webhook','update_field','conversion','assign_agent','payment','clear_var','calculate','delay','wa_form'];
+  var skipMsg=['condition','webhook','update_field','conversion','assign_agent','payment','clear_var','calculate','delay'];
   if(skipMsg.indexOf(n.type)===-1){
     h+='<label>Message / Text</label><textarea id="bce-msg">'+escH(d.msg||'')+'</textarea>';
   }
@@ -695,16 +677,6 @@ function buildEditorHTML(n){
       break;
     case 'msg_video':
       h+='<label>Video URL</label><input type="text" id="bce-video_url" value="'+escH(d.video_url||'')+'" placeholder="https://...">';
-      break;
-    case 'msg_list':
-      h+=dynRowsField('List Items','bcb-dyn-rows',d.items||[]);
-      break;
-    case 'wa_form':
-      h+='<label>Template Name</label><input type="text" id="bce-template_name" value="'+escH(d.template_name||'')+'" placeholder="template_name">';
-      h+='<label>Message</label><textarea id="bce-msg">'+escH(d.msg||'')+'</textarea>';
-      break;
-    case 'carousel':
-      h+='<label>Cards (JSON)</label><textarea id="bce-cards" style="font-size:10px;min-height:100px">'+escH(JSON.stringify(d.cards||[],null,2))+'</textarea>';
       break;
     case 'condition':
       h+='<label>Field</label><input type="text" id="bce-field" value="'+escH(d.field||'')+'" placeholder="email">';
@@ -792,14 +764,6 @@ function applyEditor(){
       break;
     case 'msg_image':  n.data.image_url=val('bce-image_url'); break;
     case 'msg_video':  n.data.video_url=val('bce-video_url'); break;
-    case 'msg_list':
-      n.data.items=dynRows('bcb-dyn-rows');
-      edges=edges.filter(function(e){return!(e.from===selNode&&e.fromPort>=n.data.items.length);});
-      break;
-    case 'wa_form':    n.data.template_name=val('bce-template_name'); break;
-    case 'carousel':
-      try{n.data.cards=JSON.parse(document.getElementById('bce-cards').value);}catch(e){}
-      break;
     case 'condition':
       n.data.field=val('bce-field');n.data.operator=val('bce-operator');n.data.value=val('bce-value');
       break;
