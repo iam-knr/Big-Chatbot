@@ -23,7 +23,7 @@ var wirePreview=null;
 var SNAP=20;
 
 /* ══════════════════════════════════════
-   NODE DEFINITIONS  (Interakt-style)
+   NODE DEFINITIONS
 ══════════════════════════════════════ */
 var DEFS={
   start:           {label:'Start',                icon:'▶',   cls:'bcb-type-start',       portsOut:['out'],          portsIn:false,  group:'special'},
@@ -44,6 +44,14 @@ var DEFS={
   whatsapp:        {label:'WhatsApp Redirect',     icon:'📱',  cls:'bcb-type-whatsapp',    portsOut:[],               portsIn:true,   group:'actions'},
   end:             {label:'End',                   icon:'✅',  cls:'bcb-type-end',         portsOut:[],               portsIn:true,   group:'actions'},
 };
+
+/* Allowed message sub-types for the Start node */
+var START_MSG_TYPES=[
+  {value:'message',    label:'Plain Message',     icon:'💬'},
+  {value:'msg_buttons',label:'Message + Buttons', icon:'⬜'},
+  {value:'msg_image',  label:'Message + Image',   icon:'🖼️'},
+  {value:'msg_video',  label:'Message + Video',   icon:'📹'},
+];
 
 var PALETTE_GROUPS=[
   {label:'Messages', nodes:['message','msg_buttons','msg_image','msg_video']},
@@ -81,8 +89,7 @@ function init(){
    BUILD PALETTE DYNAMICALLY
 ══════════════════════════════════════ */
 function buildPaletteHTML(){
-  var pal=document.getElementById('bcb-palette');
-  if(!pal)return;
+  var pal=document.getElementById('bcb-palette');if(!pal)return;
   var html='';
   PALETTE_GROUPS.forEach(function(grp){
     html+='<div class="bcb-pal-section">'+grp.label+'</div>';
@@ -118,7 +125,7 @@ function createNode(type,x,y,data,id){
 
 function defaultData(type){
   switch(type){
-    case 'start':        return {msg:'Hi! How can I help you today?'};
+    case 'start':        return {msg_type:'message',msg:'Hi! How can I help you today?'};
     case 'message':      return {msg:'Your message here...'};
     case 'msg_buttons':  return {msg:'Choose an option:',btns:['Option 1','Option 2']};
     case 'msg_image':    return {msg:'Check this out!',image_url:''};
@@ -141,21 +148,46 @@ function defaultData(type){
 
 function snap(v){return Math.round(v/SNAP)*SNAP;}
 
+/* ── Resolve effective ports for a node (handles start sub-type) ── */
+function resolvePortsOut(n){
+  if(n.type==='start'){
+    var mt=n.data.msg_type||'message';
+    if(mt==='msg_buttons') return (n.data.btns&&n.data.btns.length)?n.data.btns:['Option 1'];
+    return ['out'];
+  }
+  var def=DEFS[n.type]||DEFS.message;
+  if(def.portsOut==='dynamic'){
+    return (n.type==='msg_buttons'?(n.data.btns||[]):(n.data.items||[]));
+  }
+  return def.portsOut;
+}
+
 function renderNode(id){
   var old=document.getElementById('bcn-'+id);
   if(old)old.remove();
   var n=nodes[id];if(!n)return;
   var def=DEFS[n.type]||DEFS.message;
 
+  /* For start node, derive visual def from msg_type */
+  var displayDef=def;
+  if(n.type==='start'){
+    var mt=n.data.msg_type||'message';
+    var subDef=DEFS[mt];
+    if(subDef) displayDef={
+      label:def.label,
+      icon:def.icon,
+      cls:def.cls,  /* keep start's green colour */
+      portsIn:false,
+      portsOut:subDef.portsOut
+    };
+  }
+
   var el=document.createElement('div');
   el.id='bcn-'+id;
   el.className='bcb-node '+def.cls;
   el.style.cssText='left:'+n.x+'px;top:'+n.y+'px;';
 
-  var outs=def.portsOut==='dynamic'
-    ? (n.type==='msg_buttons'?(n.data.btns||[]):(n.data.items||[]))
-    : def.portsOut;
-
+  var outs=resolvePortsOut(n);
   var hasIn=def.portsIn!==false;
 
   /* — preview body — */
@@ -184,6 +216,14 @@ function renderNode(id){
     ? '<button class="bcb-node-del" data-del="'+id+'" title="Delete">&times;</button>'
     : '';
 
+  /* Sub-type badge for start node */
+  var startBadge='';
+  if(n.type==='start'){
+    var mt2=n.data.msg_type||'message';
+    var mtDef=DEFS[mt2]||{};
+    startBadge='<span class="bcb-start-subtype-badge">'+escH(mtDef.icon||'')+'&nbsp;'+escH(mtDef.label||mt2)+'</span>';
+  }
+
   el.innerHTML=
     '<div class="bcb-node-inner">'
     +inPort
@@ -192,6 +232,7 @@ function renderNode(id){
       +'<span class="bcb-node-head-label">'+escH(def.label)+'</span>'
       +delBtn
     +'</div>'
+    +(startBadge?'<div class="bcb-start-badge-wrap">'+startBadge+'</div>':'')
     +'<div class="bcb-node-body">'+prev+'</div>'
     +outPorts
     +'</div>';
@@ -204,7 +245,9 @@ function renderNode(id){
 
 function buildPreview(n){
   var d=n.data;
-  switch(n.type){
+  /* For start node, delegate to the active sub-type's preview logic */
+  var effectiveType=(n.type==='start')?(d.msg_type||'message'):n.type;
+  switch(effectiveType){
     case 'condition':
       return '<span class="bcb-preview-cond">IF <b>'+escH(d.field||'')+'</b> '+escH(d.operator||'')+(d.value?' = <b>'+escH(d.value)+'</b>':'')+'</span>';
     case 'delay':
@@ -229,6 +272,9 @@ function buildPreview(n){
     case 'msg_video':
       return (d.msg?'<div class="bcb-node-body-preview">'+escH((d.msg).substring(0,60))+'</div>':'')
              +(d.video_url?'<div class="bcb-preview-url">📹 '+escH(d.video_url.substring(0,40))+'</div>':'<div class="bcb-preview-dim">📹 No video URL set</div>');
+    case 'msg_buttons':
+      return (d.msg?'<div class="bcb-node-body-preview">'+escH((d.msg).substring(0,60))+'</div>':'')
+             +(d.btns&&d.btns.length?'<div class="bcb-preview-dim">'+d.btns.map(function(b){return '['+(escH(b))+']';}).join(' ')+'</div>':'');
     default:
       return d.msg?'<div class="bcb-node-body-preview">'+escH((d.msg).substring(0,80))+'</div>':'';
   }
@@ -299,7 +345,7 @@ function deleteNode(id){
 }
 
 /* ══════════════════════════════════════
-   WIRING  (click-to-connect — reliable)
+   WIRING
 ══════════════════════════════════════ */
 function startWire(nodeId,portIndex,e){
   edges=edges.filter(function(ed){
@@ -332,7 +378,6 @@ function onWireUp(e){
   SVG.style.cursor='';
   if(wirePreview){wirePreview.remove();wirePreview=null;}
 
-  /* hit-test: find input port under cursor */
   var found=null;
   var allIn=document.querySelectorAll('.bcb-port-in');
   allIn.forEach(function(dot){
@@ -353,7 +398,6 @@ function onWireUp(e){
 function finishWire(toNodeId){
   if(!connecting)return;
   if(connecting.nodeId===toNodeId){connecting=null;return;}
-  /* remove any existing edge to this same input */
   edges=edges.filter(function(ed){
     return!(ed.from===connecting.nodeId&&ed.fromPort===connecting.portIndex);
   });
@@ -417,7 +461,6 @@ function edgeStrokeColor(fromNode,portIndex){
 function drawEdges(){
   while(SVG.firstChild)SVG.removeChild(SVG.firstChild);
 
-  /* arrow markers */
   var defs=makeSVG('defs');
   [{id:'arr-main',col:'#6366f1'},{id:'arr-yes',col:'#10b981'},{id:'arr-no',col:'#ef4444'}]
   .forEach(function(m){
@@ -441,18 +484,15 @@ function drawEdges(){
 
     var g=makeSVG('g');g.setAttribute('class','bcb-edge-group');
 
-    /* invisible wide hit target */
     var hit=makeSVG('path');hit.setAttribute('d',d);hit.setAttribute('class','bcb-edge-hit');
     hit.addEventListener('click',(function(idx){return function(){edges.splice(idx,1);drawEdges();markConnectedPorts();};})(ei));
     g.appendChild(hit);
 
-    /* visible line */
     var path=makeSVG('path');path.setAttribute('d',d);
     path.setAttribute('class','bcb-edge');path.setAttribute('stroke',col);
     path.setAttribute('marker-end','url(#'+markerId+')');
     g.appendChild(path);
 
-    /* mid-point delete circle */
     var mx=(from.x+to.x)/2,my=(from.y+to.y)/2-10;
     var delG=makeSVG('g');delG.setAttribute('class','bcb-edge-del');
     var circ=makeSVG('circle');
@@ -559,7 +599,6 @@ function updateMinimap(){
     maxX=Math.max(maxX,n.x+240);maxY=Math.max(maxY,n.y+160);
   });
   var sc=Math.min(mw/(maxX-minX+80),mh/(maxY-minY+80));
-  /* edges */
   ctx.strokeStyle='rgba(99,102,241,0.45)';ctx.lineWidth=1;
   edges.forEach(function(e){
     var fn=nodes[e.from],tn=nodes[e.to];if(!fn||!tn)return;
@@ -568,7 +607,6 @@ function updateMinimap(){
     ctx.lineTo((tn.x-minX+10)*sc,(tn.y-minY+40)*sc);
     ctx.stroke();
   });
-  /* node blocks */
   var nodeColors={
     start:'#059669',message:'#4f46e5',msg_buttons:'#7c3aed',msg_image:'#2563eb',
     msg_video:'#7c3aed',
@@ -583,7 +621,6 @@ function updateMinimap(){
     ctx.roundRect((n.x-minX)*sc,(n.y-minY)*sc,230*sc,22*sc,3);
     ctx.fill();
   });
-  /* viewport rect */
   if(MVIEW&&WRAP){
     var wr=WRAP.getBoundingClientRect();
     var vx=(-panX/zoom-minX)*sc,vy=(-panY/zoom-minY)*sc;
@@ -641,8 +678,39 @@ function openEditor(id){
   var title=document.getElementById('bcb-editor-title');
   var n=nodes[id];if(!n)return;
   panel.hidden=false;
-  title.textContent='Edit: '+(DEFS[n.type]||{label:n.type}).label;
+
+  if(n.type==='start'){
+    var mt=n.data.msg_type||'message';
+    var subDef=DEFS[mt]||{};
+    title.textContent='Edit: Start — '+(subDef.label||mt);
+  } else {
+    title.textContent='Edit: '+(DEFS[n.type]||{label:n.type}).label;
+  }
+
   fields.innerHTML=buildEditorHTML(n);
+
+  /* Wire up live msg_type switcher for start node */
+  var mtSel=document.getElementById('bce-msg_type');
+  if(mtSel){
+    mtSel.addEventListener('change',function(){
+      var newMt=mtSel.value;
+      n.data.msg_type=newMt;
+      /* Seed new sub-type fields with defaults if missing */
+      if(newMt==='msg_buttons'&&!n.data.btns)n.data.btns=['Option 1','Option 2'];
+      if(newMt==='msg_image'&&n.data.image_url===undefined)n.data.image_url='';
+      if(newMt==='msg_video'&&n.data.video_url===undefined)n.data.video_url='';
+      /* Prune orphaned edges when switching away from buttons */
+      if(newMt!=='msg_buttons'){
+        edges=edges.filter(function(e){return e.from!==id||e.fromPort===0;});
+      }
+      /* Re-render node on canvas immediately */
+      renderNode(id);
+      drawEdges();markConnectedPorts();
+      /* Re-open editor to refresh fields */
+      openEditor(id);
+    });
+  }
+
   fields.querySelectorAll('.bcb-btn-row-del').forEach(function(b){
     b.addEventListener('click',function(){b.closest('.bcb-btn-row').remove();});
   });
@@ -662,7 +730,28 @@ function buildEditorHTML(n){
   var d=n.data;
   var h='';
 
-  /* Shared message field */
+  /* ── START NODE: type selector first, then sub-type fields ── */
+  if(n.type==='start'){
+    var currentMt=d.msg_type||'message';
+    h+='<label>Message Type</label>';
+    h+='<select id="bce-msg_type">';
+    START_MSG_TYPES.forEach(function(opt){
+      h+='<option value="'+opt.value+'"'+(currentMt===opt.value?' selected':'')+'>'+escH(opt.icon)+' '+escH(opt.label)+'</option>';
+    });
+    h+='</select>';
+    /* Now render the sub-type specific fields */
+    h+='<label>Message / Text</label><textarea id="bce-msg">'+escH(d.msg||'')+'</textarea>';
+    if(currentMt==='msg_buttons'){
+      h+=dynRowsField('Button Options','bcb-dyn-rows',d.btns||[]);
+    } else if(currentMt==='msg_image'){
+      h+='<label>Image URL</label><input type="text" id="bce-image_url" value="'+escH(d.image_url||'')+'" placeholder="https://...">';
+    } else if(currentMt==='msg_video'){
+      h+='<label>Video URL</label><input type="text" id="bce-video_url" value="'+escH(d.video_url||'')+'" placeholder="https://...">';
+    }
+    return h;
+  }
+
+  /* Shared message field for all non-start nodes */
   var skipMsg=['condition','webhook','update_field','conversion','assign_agent','payment','clear_var','calculate','delay'];
   if(skipMsg.indexOf(n.type)===-1){
     h+='<label>Message / Text</label><textarea id="bce-msg">'+escH(d.msg||'')+'</textarea>';
@@ -756,6 +845,25 @@ function applyEditor(){
     var rows=document.querySelectorAll('#'+containerId+' .bcb-btn-row input');
     var arr=[];rows.forEach(function(inp){if(inp.value.trim())arr.push(inp.value.trim());});return arr;
   }
+
+  /* ── START NODE apply ── */
+  if(n.type==='start'){
+    n.data.msg_type=val('bce-msg_type')||'message';
+    var msgEl=document.getElementById('bce-msg');if(msgEl)n.data.msg=msgEl.value;
+    if(n.data.msg_type==='msg_buttons'){
+      n.data.btns=dynRows('bcb-dyn-rows');
+      edges=edges.filter(function(e){return!(e.from===selNode&&e.fromPort>=n.data.btns.length);});
+    } else if(n.data.msg_type==='msg_image'){
+      n.data.image_url=val('bce-image_url');
+    } else if(n.data.msg_type==='msg_video'){
+      n.data.video_url=val('bce-video_url');
+    }
+    renderNode(selNode);
+    drawEdges();markConnectedPorts();
+    closeEditor();
+    return;
+  }
+
   var msg=document.getElementById('bce-msg');if(msg)n.data.msg=msg.value;
   switch(n.type){
     case 'msg_buttons':
@@ -928,6 +1036,8 @@ function importFlow(data){
   Object.keys(ns).forEach(function(id){
     var n=ns[id];
     nodes[id]={id:id,type:n.type,x:n.x,y:n.y,data:n.data||defaultData(n.type)};
+    /* Back-compat: start nodes without msg_type default to message */
+    if(n.type==='start'&&!nodes[id].data.msg_type)nodes[id].data.msg_type='message';
     var num=parseInt(id.replace('n',''),10);
     if(!isNaN(num)&&num>=nodeSeq)nodeSeq=num+1;
     renderNode(id);
@@ -947,6 +1057,8 @@ function convertTemplate(tpl){
              :(node.btns&&node.btns.length)?'msg_buttons'
              :key==='start'?'start':'message';
     var data={msg:node.msg||'',btns:(node.btns||[]).map(function(b){return b.label||b;})};
+    /* Seed msg_type for start node from template */
+    if(key==='start')data.msg_type=(node.btns&&node.btns.length)?'msg_buttons':'message';
     var id=createNode(type,x,y,data,key==='start'?'n1':null);
     stepToId[key]=id;y+=step;
     if(y>2400){y=80;x+=320;}
@@ -978,9 +1090,10 @@ function openTestModal(){
 
 function renderTestStep(nodeId){
   var n=nodes[nodeId];if(!n)return;
+  var effectiveType=(n.type==='start')?(n.data.msg_type||'message'):n.type;
   if(n.data.msg)testAddMsg(n.data.msg,'bot');
 
-  if(n.type==='msg_buttons'&&n.data.btns&&n.data.btns.length){
+  if(effectiveType==='msg_buttons'&&n.data.btns&&n.data.btns.length){
     var row=document.createElement('div');row.className='tc-btns';
     n.data.btns.forEach(function(label,i){
       var b=document.createElement('button');b.className='tc-btn';b.textContent=label;
@@ -994,6 +1107,14 @@ function renderTestStep(nodeId){
       row.appendChild(b);
     });
     document.getElementById('bcb-test-msgs').appendChild(row);
+  } else if(effectiveType==='msg_image'){
+    if(n.data.image_url)testAddMsg('[Image: '+n.data.image_url+']','bot');
+    var next=edges.find(function(e){return e.from===nodeId;});
+    if(next)setTimeout(function(){renderTestStep(next.to);},400);
+  } else if(effectiveType==='msg_video'){
+    if(n.data.video_url)testAddMsg('[Video: '+n.data.video_url+']','bot');
+    var next=edges.find(function(e){return e.from===nodeId;});
+    if(next)setTimeout(function(){renderTestStep(next.to);},400);
   } else if(n.type==='condition'){
     testAddMsg('[Condition: '+n.data.field+' '+n.data.operator+(n.data.value?' '+n.data.value:'')+']','sys');
   } else if(n.type==='delay'){
